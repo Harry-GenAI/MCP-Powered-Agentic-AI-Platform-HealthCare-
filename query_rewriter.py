@@ -4,6 +4,8 @@ from openai import OpenAI
 
 load_dotenv()
 
+client = OpenAI()
+
 def rewrite_query(query:str, history:str)->str:
 
     prompt = f"""
@@ -38,8 +40,6 @@ def rewrite_query(query:str, history:str)->str:
     
     Rewritten Query:
     """
-
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     response = client.responses.create(
         input=prompt,
         model="gpt-5-nano",

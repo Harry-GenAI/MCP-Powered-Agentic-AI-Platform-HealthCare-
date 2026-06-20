@@ -67,10 +67,9 @@ def build_vectordb(chunks):
    texts = [chunk.page_content for chunk in chunks]
    metadatas=[chunk.metadata for chunk in chunks]
 
-   vector_db=Chroma.from_texts(
-      texts=texts,
+   vector_db=Chroma.from_documents(
+      documents=chunks,
       embedding=embedding_model,
-      metadatas=metadatas,
       persist_directory="./chroma_db",
       collection_metadata={"hnsw:space":"cosine"} #"hnsw":"cosine" will set the distance metric as cosine similarity
    )
