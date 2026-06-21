@@ -45,16 +45,9 @@ def generate_reply_sync(prompt: str):
             pad_token_id=tokenizer.eos_token_id
         )
 
-    prompt_length = inputs["input_ids"].shape[1]
-    generated_tokens = outputs[0][prompt_length:]
-    full_text = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    prompt_length = len(inputs["input_ids"][0])#explanation-II
+    answer = tokenizer.decode(outputs[0][prompt_length:], skip_special_tokens=True).strip()
     
-    # Logic to extract only the answer part
-    if "assistant" in full_text.lower():
-        answer = full_text.split("assistant")[-1].strip()
-    else:
-        answer = full_text.replace(prompt, "").strip()
-        
     return answer
 
 async def generate_reply(prompt: str):
