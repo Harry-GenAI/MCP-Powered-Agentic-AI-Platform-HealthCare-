@@ -6,6 +6,8 @@ import os
 
 from logger import logger
 from db import create_table, save_chat, get_chat_history
+from prometheus_fastapi_instrumentator import Instrumentator
+
 
 # -----------------------------------------------------
 # Ensure vector index exists (auto-ingest for container)
@@ -17,7 +19,7 @@ if not os.path.exists("chroma_db") or not os.listdir("chroma_db"):
     ingest.main()
 
 from rag import retrieve_context
-from llmservice import generate_reply
+from llmservice_vllm import generate_reply
 from prompts import build_prompt
 from safety import is_safe_input
 from query_rewriter import rewrite_query
@@ -35,6 +37,7 @@ except Exception:
 
 app = FastAPI()
 
+Instrumentator().instrument(app).expose(app) #for prometheus 
 
 # ---------------------------------------------------------
 # REQUEST / RESPONSE SCHEMAS
@@ -140,6 +143,7 @@ async def chat(req: ChatRequest):
     save_chat(session_id, req.message, answer)
 
     logger.info(f"Response completed | session={session_id}")
+    
 
     return {
         "answer": answer,
