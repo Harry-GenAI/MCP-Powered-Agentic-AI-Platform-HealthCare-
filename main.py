@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import uuid
 import asyncio
 import os
+import time
 
 from logger import logger
 from db import create_table, save_chat, get_chat_history
@@ -37,7 +38,8 @@ except Exception:
 
 app = FastAPI()
 
-Instrumentator().instrument(app).expose(app) #for prometheus 
+Instrumentator().instrument(app).expose(app)  # for prometheus
+
 
 # ---------------------------------------------------------
 # REQUEST / RESPONSE SCHEMAS
@@ -45,7 +47,7 @@ Instrumentator().instrument(app).expose(app) #for prometheus
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
-    domain: str | None = None   # metadata filter support
+    domain: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -61,7 +63,7 @@ class ChatResponse(BaseModel):
 @app.get("/")
 def health():
     logger.info("Health check called")
-    return {"status": "Enterprise Bedrock RAG running"}
+    return {"status": "PLRS is Running.."}
 
 
 # ---------------------------------------------------------
@@ -69,6 +71,8 @@ def health():
 # ---------------------------------------------------------
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
+
+    api_start = time.time()
 
     # create or reuse session
     session_id = req.session_id or str(uuid.uuid4())
@@ -89,8 +93,10 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Load conversation memory
     # -----------------------------------------------------
+    start = time.time()
     try:
         history = get_chat_history(session_id)
+        logger.debug(f"[{session_id}] Memory took {time.time()-start:.3f} secs")
     except Exception:
         logger.exception("Chat history load failed; continuing without memory")
         history = ""
@@ -98,11 +104,13 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Rewrite vague questions
     # -----------------------------------------------------
-    rewritten_query = await asyncio.to_thread(
-        rewrite_query,
-        req.message,
-        history
-    )
+    start = time.time()
+    if history:
+        rewritten_query = await rewrite_query(req.message, history)
+        logger.debug(f"[{session_id}] Query Rewriting took {time.time()-start:.3f} secs")
+    
+    else:
+        rewritten_query = req.message
 
     # -----------------------------------------------------
     # Metadata filter (domain routing)
@@ -115,13 +123,22 @@ async def chat(req: ChatRequest):
         }
 
     # -----------------------------------------------------
-    # Retrieve context from vector store (non-blocking)
+    # Retrieve context from vector store
     # -----------------------------------------------------
-    context, sources = await asyncio.to_thread(
+    start = time.time()
+    logger.debug(f"{session_id} Entering into RAG asyncio thread 💣")
+    context, sources = retrieve_context(
+    rewritten_query,
+    metadata_filter=metadata_filter,
+    session_id=session_id
+)
+    '''context, sources = await asyncio.to_thread(
         retrieve_context,
         rewritten_query,
-        metadata_filter=metadata_filter
-    )
+        metadata_filter=metadata_filter,
+        session_id=session_id
+    )'''
+    logger.debug(f"[{session_id}] rag-api req took {time.time()-start:.3f} secs")
 
     if not context:
         logger.warning("No retrieval context found")
@@ -135,15 +152,24 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Call LLM
     # -----------------------------------------------------
+    start = time.time()
     answer = await generate_reply(prompt)
+    logger.debug(f"[{session_id}] llm answered in {time.time()-start:.3f} secs")
 
     # -----------------------------------------------------
     # Save conversation memory
     # -----------------------------------------------------
+    start = time.time()
     save_chat(session_id, req.message, answer)
+    logger.debug(f"[{session_id}] chat saved in {time.time()-start:.3f} secs")
+
+    logger.debug(f"[{session_id}] Total API took {time.time()-api_start:.3f} secs")
 
     logger.info(f"Response completed | session={session_id}")
-    
+    if history:
+        logger.debug(f"session id: {session_id} \n Question : {req.message} \n History Used : {history} \n Rewrriten Query : {rewritten_query}")
+
+    logger.debug(f"session id: {session_id} \n Question:{req.message} \n Answer:{answer}")
 
     return {
         "answer": answer,
@@ -151,5 +177,3 @@ async def chat(req: ChatRequest):
         "sources": sources,
         "context": context
     }
-
-

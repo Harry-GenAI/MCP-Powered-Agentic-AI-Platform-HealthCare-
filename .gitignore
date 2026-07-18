@@ -42,3 +42,14 @@ core-key.pem
 Thumbs.db
 .vscode/
 .idea/
+
+#lightning ai
+.triton/
+.lightning_studio/
+.cursor-server
+.vscode-server
+.windsurf-server
+terminal
+__pycache__/
+*.pyc
+.env

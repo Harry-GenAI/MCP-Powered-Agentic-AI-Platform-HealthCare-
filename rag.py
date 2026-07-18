@@ -3,6 +3,7 @@ from langchain_community.vectorstores import Chroma
 from sentence_transformers import CrossEncoder
 import re
 from logger import logger
+import time
 
 
 # Embedding model used for the persisted Chroma collection.
@@ -19,6 +20,7 @@ reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 
 def compress_context(query, docs):
+    start = time.time()
     sentences = []
     seen_sentences = set()
 
@@ -60,14 +62,17 @@ def compress_context(query, docs):
         source = metadata.get("source")
         if source:
             sources.append(source)
+    logger.debug(f"context compression took {time.time()-start:.3f} secs")
     logger.info(f"After context compressor, context built with '{len(top_sentences)}' sentences")
     return context, list(set(sources))
 
 
-def retrieve_context(query, k=8, metadata_filter: dict | None = None):
-    
+def retrieve_context(query, k=8, metadata_filter: dict | None = None, session_id=""):
+    logger.debug(f"{session_id} Entered into RAG thread 💥")
+    start_ragpp = time.time()
     results = vector_db.similarity_search(query, k=k)
-    
+    logger.debug(f"retrieve the docs from Chroma took {time.time()-start_ragpp} sec")
+
     #Metadata Filter
     filtered_docs = []
 
@@ -86,6 +91,7 @@ def retrieve_context(query, k=8, metadata_filter: dict | None = None):
         return "", []
     
     #ReRanker
+    start = time.time()
     pairs = [(query, doc.page_content) for doc in filtered_docs]
     scores = reranker.predict(pairs)
 
@@ -96,7 +102,8 @@ def retrieve_context(query, k=8, metadata_filter: dict | None = None):
     )
 
     top_docs = [doc for doc, score in reranked[:3]]
+    logger.debug(f"reranker for retrievd docs took {time.time()-start} secs")
     logger.info(f"After rerank '{len(top_docs)}' chunks sent to context compression")
     context, sources = compress_context(query, top_docs)
-
+    logger.debug(f"Entire RAGPP for {session_id} took {time.time()-start_ragpp} secs")
     return context, sources
