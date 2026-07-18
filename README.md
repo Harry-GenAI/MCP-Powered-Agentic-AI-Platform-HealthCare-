@@ -132,9 +132,13 @@ Project validation screenshots are stored in `git_screenshots/`.
 
 ![vLLM server running](git_screenshots/vllm.png)
 
-### Grafana Token Metrics
+### Grafana Query Rewrite Optimization
 
-![Grafana token metrics dashboard](git_screenshots/grafana_tokens.png)
+![Grafana metrics after updating standalone query rewriting](git_screenshots/metrics_after_updating_query_rewrite.png)
+
+### Grafana 100 VU Load Test
+
+![Grafana 100 VU API and vLLM latency dashboard](git_screenshots/with_100_vus.png)
 
 ## Future Upgrades
 
