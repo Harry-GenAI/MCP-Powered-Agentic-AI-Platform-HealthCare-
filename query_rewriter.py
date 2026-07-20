@@ -5,11 +5,7 @@ import time
 
 load_dotenv()
 
-# Local vLLM server
-client = AsyncOpenAI(
-    api_key="EMPTY",
-    base_url="http://localhost:8000/v1"
-)
+client = AsyncOpenAI()
 
 VAGUE_WORDS = {
     "it", "this", "that", "these", "those",
@@ -36,13 +32,28 @@ Your job is to rewrite the User's vague question into a standalone question
 optimized for semantic search.
 
 Rules:
-- Do not answer the question.
-- Do not ask follow-up questions.
 - Do not change the meaning.
-- Fix grammar if needed.
-- Use chat history only when necessary.
-- If the question is already standalone, return it unchanged.
-- If the user starts a new topic, ignore previous chat history.
+- Do not explain the rewrite.
+- Do not ask follow-up questions.
+- Do not answer the question.
+- Fix grammatical errors.
+- Use chat history below for vague words like "it", "that", "there", "this", "same", or "previous".
+- If the query is vague, use the most relevant topic in the chat history and rewrite the query.
+- If the user starts a new topic, ignore the previous chat history.
+- If chat history is empty, rewrite using only the current query.
+- Never ask the user to provide chat history.
+- If the query is already a clear standalone question, return it unchanged.
+- Return ONLY the rewritten query.
+
+Examples:
+
+Chat History: user asked about HR leave policy
+User: what about that?
+Rewritten Query: What is the company's HR leave policy?
+
+Chat History: user asked about HR leave policy
+User: what is refund time?
+Rewritten Query: What is the refund processing time?
 
 Chat History:
 {history}
@@ -55,22 +66,19 @@ Rewritten Query:
 
     start = time.time()
 
-    response = await client.chat.completions.create(
-        model="private-llm",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.0,
-        max_tokens=128
+    response = await client.responses.create(
+        model="gpt-5-nano",
+        input=prompt
     )
 
-    rewritten_query = response.choices[0].message.content.strip()
+    rewritten_query = response.output_text.strip()
 
     logger.debug(
         f"Rewritten query took {(time.time() - start):.3f} secs"
+    )
+
+    logger.debug(
+        f"Rewritten Query:{rewritten_query}"
     )
 
     return rewritten_query or query.strip()

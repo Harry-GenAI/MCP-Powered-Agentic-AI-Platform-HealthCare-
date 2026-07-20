@@ -5,7 +5,8 @@ client = OpenAI(
     base_url="http://localhost:8000/v1"
 )
 
-async def generate_reply(prompt: str):
+
+async def generate_reply(prompt: str) -> str:
 
     response = client.chat.completions.create(
         model="private-llm",
@@ -18,5 +19,6 @@ async def generate_reply(prompt: str):
         temperature=0.1,
         max_tokens=150
     )
-
-    return response.choices[0].message.content
+    
+    print(f"\n\n Inject prompt is:{prompt}\n\n")
+    return response.choices[0].message.content.strip()

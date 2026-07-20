@@ -1,12 +1,14 @@
 
 def build_prompt(context: str, question: str) -> str:
-    return f"""You are a private RAG assistant. Answer only from the provided context.
-If the context does not contain the answer, say you do not know.
+    return f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-Context:
+You are a professional assistant. Answer ONLY using this context:
+
 {context}
 
-Question:
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
 {question}
 
-Answer:"""
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+"""

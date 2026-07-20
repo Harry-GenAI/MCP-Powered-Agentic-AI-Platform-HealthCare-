@@ -127,18 +127,12 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     start = time.time()
     logger.debug(f"{session_id} Entering into RAG asyncio thread 💣")
-    context, sources = retrieve_context(
+    context, sources, retrieve_results = retrieve_context(
     rewritten_query,
     metadata_filter=metadata_filter,
     session_id=session_id
 )
-    '''context, sources = await asyncio.to_thread(
-        retrieve_context,
-        rewritten_query,
-        metadata_filter=metadata_filter,
-        session_id=session_id
-    )'''
-    logger.debug(f"[{session_id}] rag-api req took {time.time()-start:.3f} secs")
+
 
     if not context:
         logger.warning("No retrieval context found")
@@ -152,18 +146,14 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Call LLM
     # -----------------------------------------------------
-    start = time.time()
+    
     answer = await generate_reply(prompt)
-    logger.debug(f"[{session_id}] llm answered in {time.time()-start:.3f} secs")
-
+    
     # -----------------------------------------------------
     # Save conversation memory
     # -----------------------------------------------------
-    start = time.time()
+    
     save_chat(session_id, req.message, answer)
-    logger.debug(f"[{session_id}] chat saved in {time.time()-start:.3f} secs")
-
-    logger.debug(f"[{session_id}] Total API took {time.time()-api_start:.3f} secs")
 
     logger.info(f"Response completed | session={session_id}")
     if history:
