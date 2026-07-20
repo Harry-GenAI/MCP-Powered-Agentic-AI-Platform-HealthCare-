@@ -93,7 +93,7 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Load conversation memory
     # -----------------------------------------------------
-    start = time.time()
+    
     try:
         history = get_chat_history(session_id)
         logger.debug(f"[{session_id}] Memory took {time.time()-start:.3f} secs")
@@ -107,7 +107,7 @@ async def chat(req: ChatRequest):
     start = time.time()
     if history:
         rewritten_query = await rewrite_query(req.message, history)
-        logger.debug(f"[{session_id}] Query Rewriting took {time.time()-start:.3f} secs")
+        logger.info(f"[{session_id}] Query Rewriting took {time.time()-start:.3f} secs")
     
     else:
         rewritten_query = req.message
@@ -125,13 +125,14 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Retrieve context from vector store
     # -----------------------------------------------------
-    start = time.time()
-    logger.debug(f"{session_id} Entering into RAG asyncio thread 💣")
+    rag_start = time.time()
     context, sources, retrieve_results = retrieve_context(
     rewritten_query,
     metadata_filter=metadata_filter,
     session_id=session_id
-)
+    )
+    logger.info(f"{session_id} : RAGPP took {time.time()-rag_start:.3f} secs")   
+
 
 
     if not context:
@@ -146,8 +147,9 @@ async def chat(req: ChatRequest):
     # -----------------------------------------------------
     # Call LLM
     # -----------------------------------------------------
-    
+    llm_start=time.time()
     answer = await generate_reply(prompt)
+    logger.info(f"{session_id} : llm took {time.time()-llm_start:.3f} secs")
     
     # -----------------------------------------------------
     # Save conversation memory
@@ -156,10 +158,7 @@ async def chat(req: ChatRequest):
     save_chat(session_id, req.message, answer)
 
     logger.info(f"Response completed | session={session_id}")
-    if history:
-        logger.debug(f"session id: {session_id} \n Question : {req.message} \n History Used : {history} \n Rewrriten Query : {rewritten_query}")
 
-    logger.debug(f"session id: {session_id} \n Question:{req.message} \n Answer:{answer}")
 
     return {
         "answer": answer,

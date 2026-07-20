@@ -24,6 +24,9 @@ prac.py
 rag1.py
 llmservice1.py
 notes.py
+regex_cheatsheet.png
+prac.pyc
+debug_notes.py
 
 # Personal notes and local documents
 *.docx

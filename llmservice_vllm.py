@@ -20,5 +20,21 @@ async def generate_reply(prompt: str) -> str:
         max_tokens=150
     )
     
-    print(f"\n\n Inject prompt is:{prompt}\n\n")
     return response.choices[0].message.content.strip()
+
+async def rewrite(prompt):
+
+    response = client.chat.completions.create(
+        model="private-llm",
+        messages=[
+        
+            {
+                "role":"user",
+                "content":prompt
+            }
+        ],
+        temperature=0.1,
+        reasoning_effort= "high"
+    )
+
+    return response.choices[0].message.content

@@ -72,13 +72,6 @@ Rewritten Query:
     )
 
     rewritten_query = response.output_text.strip()
-
-    logger.debug(
-        f"Rewritten query took {(time.time() - start):.3f} secs"
-    )
-
-    logger.debug(
-        f"Rewritten Query:{rewritten_query}"
-    )
+    
 
     return rewritten_query or query.strip()

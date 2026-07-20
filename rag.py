@@ -88,7 +88,7 @@ def retrieve_context(query, k=8, metadata_filter: dict | None = None, session_id
         filtered_docs.append(doc)
 
     if not filtered_docs:
-        return "", []
+        return "", [], []
     
     #ReRanker
     start = time.time()
