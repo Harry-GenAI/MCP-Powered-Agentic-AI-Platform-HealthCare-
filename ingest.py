@@ -1,98 +1,181 @@
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from logger import logger
 import os
 import re
 import shutil
 
+from langchain_core.documents import Document
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
 
+from logger import logger
 
-#embed model
+#Embedding Model
 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-#clean text fun/pre-processing fun
-def clean_text(text):
-   #replacing the \n with space but not touching the "\n\n"
-   text = re.sub(r'((?<!\n)\n(?!\n))', ' ', text)
-   #collapse multiple spaces into one
-   text = re.sub(r' +', ' ', text)
-   #Fix removing any string started with . or any other special charcs after chunking
-   text = re.sub(r'^[\.\,\-\:]+\s*', '', text)
 
-   return text.strip()
-
-#load_docs
+# Load entire PDF as one document
 def load_docs(folder="docs"):
-   
-   documents = []
 
-   for file in os.listdir(folder):
-      if not file.endswith(".pdf"):
-         continue
-      path = os.path.join(folder, file)
-      loader = PyPDFLoader(path)
-      docs = loader.load()
+    documents = []
 
-      #add metadata:
-      for doc in docs:
-         doc.metadata["source"]=file
-         doc.metadata["doc_type"]=file.replace(".pdf","")
-         doc.metadata["department"]="general"
-      documents.extend(docs)
-   return documents
+    for file in os.listdir(folder):
+
+        if not file.endswith(".pdf"):
+            continue
+
+        path = os.path.join(folder, file)
+
+        logger.info(f"Loading {file}")
+
+        loader = PyPDFLoader(path)
+
+        pages = loader.load()
+
+        # Merge all pages into one text
+        full_text = "\n\n".join(
+            page.page_content for page in pages
+        )
+
+        metadata = pages[0].metadata.copy()
+
+        metadata["source"] = file
+        metadata["doc_type"] = file.replace(".pdf", "")
+
+        if "leave" in file:
+
+            metadata["department"] = "hr"
+            metadata["category"] = "leave"
+            metadata["tags"] = "leave,annual leave,casual leave,sick leave,maternity,paternity"
+
+        elif "travel" in file:
+
+            metadata["department"] = "administration"
+            metadata["category"] = "travel"
+            metadata["tags"] = "travel,hotel,flight,reimbursement,transport"
+
+        elif "remote" in file:
+
+            metadata["department"] = "it"
+            metadata["category"] = "remote_work"
+            metadata["tags"] = "remote work,vpn,mfa,laptop,security"
+
+        else:
+
+            metadata["department"] = "general"
+            metadata["category"] = "general"
+            metadata["tags"] = "general"
+
+        documents.append(
+
+            Document(
+
+                page_content=full_text,
+
+                metadata=metadata
+
+            )
+
+        )
+
+    logger.info(f"Loaded {len(documents)} complete documents")
+
+    return documents
 
 
-#chunks
+# ------------------------------------
+# Regex Chunking
+# ------------------------------------
 def create_chunks(docs):
-   splitter = RecursiveCharacterTextSplitter(
-      chunk_size=500,
-      chunk_overlap=100,
-      separators=["\n\n", ".", " "]
-   )
 
-   chunks = splitter.split_documents(docs)
-   
-   for chunk in chunks:
-      chunk.page_content = clean_text(chunk.page_content) #to remove any string or pagecontent started with "."
-   return chunks
+    chunks = []
+
+    for doc in docs:
+
+        text = doc.page_content
+
+        source = doc.metadata["source"]
+
+        if "leave" in source:
+            pattern = r"(?=Leave Code:\s*LV-\d+)"
+
+        elif "travel" in source:
+            pattern = r"(?=Travel Code:\s*TR-\d+)"
+
+        elif "remote" in source:
+            pattern = r"(?=Remote Work Code:\s*RW-\d+)"
+
+        else:
+            pattern = None
 
 
-#embd docs and add in vectordb (chroma)
+        if pattern:
+            sections = re.split(
+                pattern,
+                text,
+                flags=re.IGNORECASE
+            )
+        else:
+            sections = [text]
+
+
+        for section in sections:
+
+            section = section.strip()
+
+            if len(section) < 20:
+                continue
+
+            chunks.append(
+                Document(
+                    page_content=section.lower(),
+                    metadata=doc.metadata.copy()
+                )
+            )
+
+    logger.info(f"Created {len(chunks)} regex chunks")
+
+    return chunks
+
+# ------------------------------------
+# Build Chroma VectorDB
+# ------------------------------------
 def build_vectordb(chunks):
-   if os.path.exists("./chroma_db"):
-      shutil.rmtree("./chroma_db")
 
-   texts = [chunk.page_content for chunk in chunks]
-   metadatas=[chunk.metadata for chunk in chunks]
+    logger.info("Building Chroma Vector Database...")
 
-   vector_db=Chroma.from_documents(
-      documents=chunks,
-      embedding=embedding_model,
-      persist_directory="./chroma_db",
-      collection_metadata={"hnsw:space":"cosine"} #"hnsw":"cosine" will set the distance metric as cosine similarity
-   )
+    if os.path.exists("./chroma_db"):
+        shutil.rmtree("./chroma_db")
 
-   vector_db.persist()
-   return vector_db
+    vector_db = Chroma.from_documents(
+        documents=chunks,
+        embedding=embedding_model,
+        persist_directory="./chroma_db",
+        collection_metadata={"hnsw:space": "cosine"},
+    )
 
+    logger.info("Vector DB Created Successfully.")
 
-#main()
+    return vector_db
+
+# ------------------------------------
+# main()
+# ------------------------------------
 def main():
-   logger.info("\n---ingestion pipeline started---")
-   documents = load_docs()
-   chunks = create_chunks(documents)
-   build_vectordb(chunks)
 
-   logger.info(f"\n\n----ingestion completed with {len(chunks)} chunks-----\n")
-   
-#entry-point guard
-if __name__ == "__main__":
-   main()
+    logger.info("------ Ingestion Started ------")
+
+    docs = load_docs()
+
+    chunks = create_chunks(docs)
+
+    build_vectordb(chunks)
+
+    logger.info(f"Total Documents : {len(docs)}")
+    logger.info(f"Total Chunks    : {len(chunks)}")
+
+    logger.info("------ Ingestion Completed ------")
 
 
-
-   
-
-
+#python safeguard
+if __name__ =="__main__":
+    main()

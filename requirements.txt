@@ -1,3 +1,4 @@
+rank-bm25
 fastapi
 uvicorn
 pydantic
@@ -14,3 +15,4 @@ pypdf
 sentence-transformers
 prometheus-fastapi-instrumentator
 vllm
+langchain

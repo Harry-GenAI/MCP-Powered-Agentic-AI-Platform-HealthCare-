@@ -1,97 +1,153 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from ingest import load_docs, create_chunks
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
+from logger import logger
 from sentence_transformers import CrossEncoder
 import re
-from logger import logger
-import time
 
+#preprcessing fun/clean text
 
-# Embedding model used for the persisted Chroma collection.
+#embedding model
 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# Load the persisted vector database.
+#load vdb
 vector_db = Chroma(
     persist_directory="./chroma_db",
-    embedding_function=embedding_model
+    embedding_function=embedding_model,
 )
 
-# Cross-encoder reranker for document and sentence scoring.
-reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+#Build BM25
+logger.info("Loading documents for BM25 retriever...")
+
+docs = load_docs()
+
+logger.info("Creating Chunks")
+
+chunks = create_chunks(docs)
+
+logger.info("Creating BM25 retriever")
+
+bm25_retriever = BM25Retriever.from_documents(chunks)
+
+bm25_retriever.k = 8
 
 
-def compress_context(query, docs):
-    start = time.time()
-    sentences = []
-    seen_sentences = set()
+#Chroma Retriever
+logger.info("Creating Chroma Retriever...")
+
+dense_retriever = vector_db.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k":8}
+)
+
+
+#Hybrid Search
+logger.info("Creating Ensemble Retriever...")
+
+ensemble_retriever = EnsembleRetriever(
+    retrievers=[
+        dense_retriever,
+        bm25_retriever
+    ],
+    weights=[
+        0.5,
+        0.5
+    ]
+)
+
+#Metadata Filtering
+def apply_metadata_filter(
+
+    docs,
+
+    metadata_filter=None
+
+):
+
+    if metadata_filter is None:
+
+        return docs
+
+
+    filtered_docs = []
+
 
     for doc in docs:
-        #looks for a period, exclamation, or question mark, but only splits if there is a space after it.
-        lines = re.split(r'(?<=[.!?])\s+', doc.page_content)
-        for line in lines:
-            clean = line.strip()
-            dedupe_key = re.sub(r'\s+', ' ', clean).lower().strip(".!?;:,")#explanation-I
-            if clean and dedupe_key not in seen_sentences:
-                seen_sentences.add(dedupe_key)
-                sentences.append((clean, doc.metadata))
 
-    if not sentences:
-        return "", []
+        matched = all(
 
-    pairs = [(query, sentence) for sentence, _ in sentences]
-    scores = reranker.predict(pairs)
+            doc.metadata.get(key) == value
 
-    reranked = sorted(
-        zip(sentences, scores),
-        key=lambda x: x[1],
-        reverse=True
+            for key, value in metadata_filter.items()
+
+        )
+
+
+        if matched:
+
+            filtered_docs.append(doc)
+
+
+    logger.info(
+
+        f"Metadata Filter : {len(filtered_docs)} documents selected."
+
     )
 
-    threshold = 0.3
-    top_sentences = [item for item in reranked if item[1] > threshold][:5]
 
-    if not top_sentences:
-        logger.info("context compression fallback activated..")
-        top_sentences = reranked[:3]
+    return filtered_docs
+
+
+#cross encoder
+logger.info("Loading CrossEncoder...")
+
+reranker = CrossEncoder(
+    "cross-encoder/ms-marco-MiniLM-L-6-v2"
+)
+
+#build context
+def build_context(top_docs):
 
     context = ""
     sources = []
 
-    for (sentence, metadata), score in top_sentences:
-        context += f"[source:{metadata.get('source')}]\n"
-        context += sentence + "\n\n"
-        source = metadata.get("source")
-        if source:
+    seen_sources = set()
+
+    for doc in top_docs:
+
+        context += f"[source:{doc.metadata.get('source')}]\n"
+        context += doc.page_content.strip()
+        context += "\n\n"
+
+        source = doc.metadata.get("source")
+
+        if source not in seen_sources:
+            seen_sources.add(source)
             sources.append(source)
 
-    logger.info(f"After context compressor, context built with '{len(top_sentences)}' sentences")
-    
-    return context, list(set(sources))
+    logger.info(f"Context built with {len(top_docs)} chunks")
+
+    return context, sources
 
 
-def retrieve_context(query, k=8, metadata_filter: dict | None = None, session_id=""):
-    
-    results = vector_db.similarity_search(query, k=k)
-    
+#retrieve fun
+def retrieve_context(query, metadata_filter:dict | None = None):
 
-    #Metadata Filter
-    filtered_docs = []
+    #Hybrid Retrieval:
+    retrieved_docs = ensemble_retriever.invoke(query)
 
-    for doc in results:
-        if metadata_filter:
-            match = all(
-                doc.metadata.get(meta_key) == meta_value
-                for meta_key, meta_value in metadata_filter.items()
-            )
-            if not match:
-                continue
-
-        filtered_docs.append(doc)
+    #metadata filter
+    filtered_docs = apply_metadata_filter(retrieved_docs, metadata_filter)
 
     if not filtered_docs:
-        return "", [], []
+        logger.warning("No documents found after metadata filtering..")
+
+        return "No relevant compnay knowledge found", [], [], []
+
+    #reranker
     
-    #ReRanker
-    start = time.time()
     pairs = [(query, doc.page_content) for doc in filtered_docs]
     scores = reranker.predict(pairs)
 
@@ -103,6 +159,10 @@ def retrieve_context(query, k=8, metadata_filter: dict | None = None, session_id
 
     top_docs = [doc for doc, score in reranked[:3]]
     
-    context, sources = compress_context(query, top_docs)
+    context, sources = build_context(top_docs)
+
+    logger.info("Hybrid Retrieval Completed Successfully.")
+
+    return context, sources, retrieved_docs, top_docs
+
     
-    return context, sources, results
