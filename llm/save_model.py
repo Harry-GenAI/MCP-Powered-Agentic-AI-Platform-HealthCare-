@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import login
 import os
-from logger import logger
+from utils.logger import logger
 from dotenv import load_dotenv
 
 load_dotenv()

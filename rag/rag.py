@@ -1,9 +1,9 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-from ingest import load_docs, create_chunks
+from ingest.ingest import load_docs, create_chunks
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
-from logger import logger
+from utils.logger import logger
 from sentence_transformers import CrossEncoder
 import re
 

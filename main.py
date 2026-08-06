@@ -5,8 +5,8 @@ import asyncio
 import os
 import time
 
-from logger import logger
-from db import create_table, save_chat, get_chat_history
+from utils.logger import logger
+from utils.db import create_table, save_chat, get_chat_history
 from prometheus_fastapi_instrumentator import Instrumentator
 
 
@@ -16,14 +16,14 @@ from prometheus_fastapi_instrumentator import Instrumentator
 if not os.path.exists("chroma_db") or not os.listdir("chroma_db"):
     logger.info("Chroma index missing; running ingestion pipeline")
 
-    import ingest
-    ingest.main()
+    from ingest.ingest import main as ingest_main
+    ingest_main()
 
-from rag import retrieve_context
-from llmservice_vllm import generate_reply
-from prompts import build_prompt
-from safety import is_safe_input
-from query_rewriter import rewrite_query
+from rag.rag import retrieve_context
+from llm.llmservice_vllm import generate_reply
+from prompts.prompts import build_prompt
+from safety.safety import is_safe_input
+from utils.query_rewriter import rewrite_query
 
 
 # ---------------------------------------------------------

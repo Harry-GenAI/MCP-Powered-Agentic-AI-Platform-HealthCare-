@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from logger import logger
+from utils.logger import logger
 import asyncio
 import os
 

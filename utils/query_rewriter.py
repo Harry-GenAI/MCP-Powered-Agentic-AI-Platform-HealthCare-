@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from logger import logger
+from utils.logger import logger
 import time
 
 load_dotenv()
