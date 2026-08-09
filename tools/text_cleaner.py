@@ -1,1 +1,0 @@
-"""Text cleaning tool placeholder."""
