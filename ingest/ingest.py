@@ -7,14 +7,23 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from utils.logger import logger
 
 #Embedding Model
 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DOCS_PATH = PROJECT_ROOT / "docs"
+
+
 # Load entire PDF as one document
-def load_docs(folder="docs"):
+def load_docs(folder=DOCS_PATH):
 
     documents = []
 

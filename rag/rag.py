@@ -1,8 +1,14 @@
+import sys
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from ingest.ingest import load_docs, create_chunks
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
+
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from utils.logger import logger
 from sentence_transformers import CrossEncoder
 import re

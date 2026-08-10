@@ -1,8 +1,9 @@
 from typing import TypedDict
 
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
-import sqlite3
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from dotenv import load_dotenv
+import asyncio
 
 #Agents
 from agents.orchestrator import orchestrator_agent
@@ -19,7 +20,10 @@ from tasks.validator_task import validator_task
 from tasks.human_review_task import human_review_task
 
 #MCP Client
-from mcp.mcp_client import call_tool
+from mcp_tools.mcp_client import call_tool
+
+
+load_dotenv()
 
 
 
@@ -80,7 +84,7 @@ async def human_review_node(state:AgentState):
 async def sql_node(state:AgentState):
 
     result = await call_tool(
-        query_database, {
+        "query_database", {
             "query":state["rewritten_query"]
         } 
     )
@@ -108,7 +112,7 @@ def route_request(state:AgentState):
 
     route = state["route"]
 
-    if route in ("employee_knowledge_search", "customer_knowledge)search"):
+    if route in ("employee_knowledge_search", "customer_knowledge_search"):
         return "rag"
     
     elif route == "query_database":
@@ -161,7 +165,7 @@ graph.add_edge("tool", "validator")
 graph.add_conditional_edges(
     "human_review", approval_route, {
         "allow" : "sql",
-        EMD : END
+        END : END
     }
 )
 
@@ -169,43 +173,44 @@ graph.add_conditional_edges(
 graph.add_edge("sql", "validator")
 
 #Final Node
-graph.add_conditional_edges("validator", END)
+graph.add_edge("validator", END)
 
 
 #check-point memory + compile + invoke
 
-#sqlite checkpoint memory
-conn = sqlite3.connect("checkpoints.db", check_same_thread=False)
-memory = SqliteSaver(conn)
-
-
-app = graph.compile(checkpointer=memory)
-
-
 #prototype invocation
 if __name__ == "__main__":
 
-    config = {
-        "configurable":{
-            "thread_id":"demo-user-1"
-        }
-    }
+    async def main():
+        
+        async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as memory:
+            
+            app = graph.compile(checkpointer=memory)
+            
+            config = {
+            "configurable": {
+                "thread_id": "demo-user-1"
+            }
+            }
+            
+            initial_state = {
+            "user_query": "What is the annual leave policy?",
+            "rewritten_query": "What is the annual leave policy?",
+            "route": "",
+            "response": "",
+            "approval": ""
+            }
+            
+            result = await app.ainvoke(
+            initial_state,
+            config=config
+            )
+            
+            print("\nFinal response:\n")
+            print(result["response"])
 
-    initial_stae = {
-        "user_query" : "What is the annual leave policy?",
-        "rewritten_query" : "What is the annual leave policy?",
-        "route" : "",
-        "response" : "",
-        "approval" : ""
-    }
-
-    result = app.invoke(
-        initial_state, config=config
-    )
-
-    print("\n final response: \n\n")
-    print(result["response"])
     
+    asyncio.run(main())
 
 
 

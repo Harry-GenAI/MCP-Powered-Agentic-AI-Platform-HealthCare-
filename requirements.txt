@@ -14,7 +14,9 @@ langchain-text-splitters
 pypdf
 sentence-transformers
 prometheus-fastapi-instrumentator
-
+vllm
 langchain
 fastmcp
 crewai
+langgraph-checkpoint-sqlite
+aiosqlite

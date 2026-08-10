@@ -1,5 +1,5 @@
 from crewai import Agent
-from mcp.mcp_server import send_email, web_search, query_database
+
 
 def tool_agent():
 
