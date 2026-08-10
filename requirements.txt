@@ -20,3 +20,4 @@ fastmcp
 crewai
 langgraph-checkpoint-sqlite
 aiosqlite
+beautifulsoup4

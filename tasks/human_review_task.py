@@ -1,24 +1,24 @@
 from crewai import Task
 
-
-def human_review_task(agent, user_request):
+def human_review_task(agent, query):
 
     return Task(
-
         description=f"""
-        User Request:
+        Review this database request:
 
-        {user_request}
+        User Request: {query}
 
-        If sensitive information is requested:
-        
-        - Require OTP verification.
-        - If OTP succeeds, allow execution.
-        - Otherwise, deny execution.
+        If the request requires sensitive employee information,
+        return ONLY: allow
+
+        Otherwise return ONLY: deny
+
+        Do not explain.
+        Do not ask for OTP.
+        Do not mention OTP.
         """,
-
-        expected_output="Approval decision.",
-
+        
+        expected_output="Either 'allow' or 'deny'.",
         agent=agent
     )
 

@@ -6,6 +6,7 @@ def build_prompt(context: str, question: str) -> str:
 - Answer ONLY using this context.
 - If user asked a question with code for example: LV-103, and there is a code in context and any text of after then return the answer
   with that corresponding code text.
+
   
   Examples:
   
@@ -38,8 +39,6 @@ Employees receive 12 paid sick leave days every year.
 A medical certificate is required when sick leave exceeds two consecutive days.
 Managers may request supporting medical documents
 
-
-  :
 
 {context}
 

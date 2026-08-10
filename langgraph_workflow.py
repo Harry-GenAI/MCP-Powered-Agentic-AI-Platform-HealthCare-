@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from dotenv import load_dotenv
 import asyncio
+import secrets
 
 #Agents
 from agents.orchestrator import orchestrator_agent
@@ -69,15 +70,35 @@ async def tool_node(state:AgentState):
 
     return state
 
-async def human_review_node(state:AgentState):
+async def human_review_node(state: AgentState):
 
+    # 1. Generate OTP when entering approval stage
+    otp = str(secrets.randbelow(900000) + 100000)
+
+    print(f"\nOTP: {otp}")
+
+    # 2. Human review
     agent = human_review_agent()
 
-    task = human_review_task(agent, state["rewritten_query"])
+    task = human_review_task(
+        agent,
+        state["rewritten_query"]
+    )
 
-    result = agent.execute_task(task)
+    result = await agent.aexecute_task(task)
 
-    state["approval"] = result
+    # 3. Agent denied
+    if result.strip().lower() != "allow":
+        state["approval"] = "deny"
+        return state
+
+    # 4. Agent allowed → verify OTP
+    entered_otp = input("Enter OTP: ")
+
+    if entered_otp == otp:
+        state["approval"] = "allow"
+    else:
+        state["approval"] = "deny"
 
     return state
 
@@ -85,7 +106,7 @@ async def sql_node(state:AgentState):
 
     result = await call_tool(
         "query_database", {
-            "query":state["rewritten_query"]
+            "sql":state["rewritten_query"]
         } 
     )
 
@@ -125,7 +146,7 @@ def route_request(state:AgentState):
 def approval_route(state:AgentState):
 
     if state["approval"] == "allow":
-        return "sql"
+        return "allow"
     
     return END
 
@@ -179,38 +200,53 @@ graph.add_edge("validator", END)
 #check-point memory + compile + invoke
 
 #prototype invocation
-if __name__ == "__main__":
+async def main():
 
-    async def main():
-        
-        async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as memory:
-            
-            app = graph.compile(checkpointer=memory)
-            
-            config = {
+    async with AsyncSqliteSaver.from_conn_string("checkpoints.db") as memory:
+
+        app = graph.compile(checkpointer=memory)
+
+        config = {
             "configurable": {
                 "thread_id": "demo-user-1"
             }
-            }
-            
-            initial_state = {
-            "user_query": "What is the annual leave policy?",
-            "rewritten_query": "What is the annual leave policy?",
-            "route": "",
-            "response": "",
-            "approval": ""
-            }
-            
-            result = await app.ainvoke(
-            initial_state,
-            config=config
-            )
-            
-            print("\nFinal response:\n")
-            print(result["response"])
+        }
 
-    
+        while True:
+
+            user_query = input("\nEnter your query (or type 'exit'): ")
+
+            if user_query.lower() == "exit":
+                break
+
+            initial_state = {
+                "user_query": user_query,
+                "rewritten_query": user_query,
+                "route": "",
+                "response": "",
+                "approval": ""
+            }
+
+            result = await app.ainvoke(
+                initial_state,
+                config=config
+            )
+
+            '''print("\nFinal response:\n")
+            print(result["response"])'''
+
+            from prompts.prompts import build_prompt
+            from llm.llm_service import generate_reply
+
+            context = result["response"]
+            query = user_query
+            prompt = build_prompt(context, query)
+            answer = await generate_reply(prompt)
+            print(f"context: {context} \n\n llm_answer:{answer}")
+
+
+
+if __name__ == "__main__":
     asyncio.run(main())
 
-
-
+    

@@ -5,9 +5,10 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from rag.rag import retrieve_context
+
 import json
 import requests
+from bs4 import BeautifulSoup
 import sqlite3
 import smtplib
 import os
@@ -31,6 +32,7 @@ def employee_knowledge_search(query:str)->str:
     Search the company's internal employee knowledge base 
     such as HR, travel, and remote work policies.
     """
+    from rag.rag import retrieve_context
     context, _, _, _ = retrieve_context(query)
 
     return f"Context:{context}"
@@ -133,34 +135,28 @@ def send_email(to:str, subject:str, body:str)->str:
 
 #web search tool
 @mcp.tool()
-def web_search(query:str)->str:
-    """
-    perform a websearch using duckduckgo engine
-    returns summarized content
-    """
-    
-    try:
-        url = "https://api.duckduckgo.com/"
-        params = {
-            "q":query,
-            "format":"json"
+def web_search(query: str) -> str:
 
-        }
-        
-        results = requests.get(url, params=params)#refer explanation #1
-        results = results.json()
+    url = "https://html.duckduckgo.com/html/"
 
-        if results.get("Abstract"):
-            return results["Abstract"]
-        
-        elif results.get("RelatedTopics"):
-            topic_results = results.get("RelatedTopics", [])[:3]
-            return  "\n".join([r.get("Text", "") for r in topic_results if "Text" in r])
-        
-        return "No related information found"
-    
-    except Exception as e:
-        return f"error:{e}"
+    response = requests.get(
+        url,
+        params={"q": query},
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=10
+    )
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    results = soup.select(".result__snippet")
+
+    if results:
+        return "\n".join(
+            result.get_text(" ", strip=True)
+            for result in results[:5]
+        )
+
+    return "No search results found"
 
 
 #text cleaner tool
