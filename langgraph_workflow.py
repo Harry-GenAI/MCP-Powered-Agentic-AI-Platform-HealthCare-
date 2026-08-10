@@ -96,7 +96,7 @@ async def sql_node(state:AgentState):
 async def validator_node(state: AgentState):
 
     result = await call_tool(
-        "text_cleaner_tool",
+        "text_cleaner",
         {
             "text": state["response"]
         }
