@@ -1,4 +1,7 @@
 from openai import OpenAI
+from middleware.retry import retry
+from middleware.timeout import timeout
+from middleware.rate_limit import rate_limit
 
 client = OpenAI(
     api_key="EMPTY",
@@ -6,6 +9,9 @@ client = OpenAI(
 )
 
 
+@retry
+@timeout(60)
+@rate_limit(1,1)
 async def generate_reply(prompt: str) -> str:
 
     response = client.chat.completions.create(

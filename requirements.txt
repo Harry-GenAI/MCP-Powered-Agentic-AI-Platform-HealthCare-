@@ -21,3 +21,4 @@ crewai
 langgraph-checkpoint-sqlite
 aiosqlite
 beautifulsoup4
+redis
