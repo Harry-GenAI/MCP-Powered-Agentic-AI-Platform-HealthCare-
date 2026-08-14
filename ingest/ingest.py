@@ -1,190 +1,93 @@
-import os
-import re
-import shutil
-
-from langchain_core.documents import Document
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-from utils.logger import logger
-
-#Embedding Model
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+from datetime import datetime, timezone
 
 
-from pathlib import Path
+# ------------------------------------------------------------
+# Make project root importable when running:
+# python ingest/ingest.py
+# ------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DOCS_PATH = PROJECT_ROOT / "docs"
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+from dotenv import load_dotenv
+from utils.logger import logger
 
 
-# Load entire PDF as one document
-def load_docs(folder=DOCS_PATH):
 
-    documents = []
+load_dotenv()
 
-    for file in os.listdir(folder):
+# ============================================================
+# Paths
+# ============================================================
 
-        if not file.endswith(".pdf"):
-            continue
+DOCS_PATH = PROJECT_ROOT/"docs"
 
-        path = os.path.join(folder, file)
 
-        logger.info(f"Loading {file}")
+# ============================================================
+# Main Ingestion Pipeline
+# ============================================================
 
-        loader = PyPDFLoader(path)
+def ingest_documents():
 
-        pages = loader.load()
+    logger.info("=" * 30)
+    logger.info("MAOS Ingestion PP Started...")
+    logger.info("=" * 30)
 
-        # Merge all pages into one text
-        full_text = "\n\n".join(
-            page.page_content for page in pages
+    
+    #Validate docs folder
+    if not DOCS_PATH.exists():
+
+        raise FileNotFoundError(
+            f"Docs folder not found:{DOCS_PATH}"
         )
 
-        metadata = pages[0].metadata.copy()
-
-        metadata["source"] = file
-        metadata["doc_type"] = file.replace(".pdf", "")
-
-        if "leave" in file:
-
-            metadata["department"] = "hr"
-            metadata["category"] = "leave"
-            metadata["tags"] = "leave,annual leave,casual leave,sick leave,maternity,paternity"
-
-        elif "travel" in file:
-
-            metadata["department"] = "administration"
-            metadata["category"] = "travel"
-            metadata["tags"] = "travel,hotel,flight,reimbursement,transport"
-
-        elif "remote" in file:
-
-            metadata["department"] = "it"
-            metadata["category"] = "remote_work"
-            metadata["tags"] = "remote work,vpn,mfa,laptop,security"
-
-        else:
-
-            metadata["department"] = "general"
-            metadata["category"] = "general"
-            metadata["tags"] = "general"
-
-        documents.append(
-
-            Document(
-
-                page_content=full_text,
-
-                metadata=metadata
-
-            )
-
-        )
-
-    logger.info(f"Loaded {len(documents)} complete documents")
-
-    return documents
-
-
-# ------------------------------------
-# Regex Chunking
-# ------------------------------------
-def create_chunks(docs):
-
-    chunks = []
-
-    for doc in docs:
-
-        text = doc.page_content
-
-        source = doc.metadata["source"]
-
-        if "leave" in source:
-            pattern = r"(?=Leave Code:\s*LV-\d+)"
-
-        elif "travel" in source:
-            pattern = r"(?=Travel Code:\s*TR-\d+)"
-
-        elif "remote" in source:
-            pattern = r"(?=Remote Work Code:\s*RW-\d+)"
-
-        else:
-            pattern = None
-
-
-        if pattern:
-            sections = re.split(
-                pattern,
-                text,
-                flags=re.IGNORECASE
-            )
-        else:
-            sections = [text]
-
-
-        for section in sections:
-
-            section = section.strip()
-
-            if len(section) < 20:
-                continue
-
-            chunks.append(
-                Document(
-                    page_content=section.lower(),
-                    metadata=doc.metadata.copy()
-                )
-            )
-
-    logger.info(f"Created {len(chunks)} regex chunks")
-
-    return chunks
-
-# ------------------------------------
-# Build Chroma VectorDB
-# ------------------------------------
-def build_vectordb(chunks):
-
-    logger.info("Building Chroma Vector Database...")
-
-    if os.path.exists("./chroma_db"):
-        shutil.rmtree("./chroma_db")
-
-    vector_db = Chroma.from_documents(
-        documents=chunks,
-        embedding=embedding_model,
-        persist_directory="./chroma_db",
-        collection_metadata={"hnsw:space": "cosine"},
+    pdf_files = sorted(
+        DOCS_PATH.glob("*.pdf")
     )
 
-    logger.info("Vector DB Created Successfully.")
-
-    return vector_db
-
-# ------------------------------------
-# main()
-# ------------------------------------
-def main():
-
-    logger.info("------ Ingestion Started ------")
-
-    docs = load_docs()
-
-    chunks = create_chunks(docs)
-
-    build_vectordb(chunks)
-
-    logger.info(f"Total Documents : {len(docs)}")
-    logger.info(f"Total Chunks    : {len(chunks)}")
-
-    logger.info("------ Ingestion Completed ------")
+    if not pdf_files:
+        logger.warning("No PDF files found")
+    
+    
+    return logger.info(f"Discovered {len(pdf_files)} PDF files.")
 
 
-#python safeguard
-if __name__ =="__main__":
-    main()
+# --------------------------------------------------------
+# Load incremental-ingestion manifest
+# --------------------------------------------------------
+
+manifest = load_manifest()
+
+
+# --------------------------------------------------------
+# Connect to Weaviate once
+# --------------------------------------------------------
+
+
+
+         #process every doc
+
+
+         #pdf -> text/OCR/tables
+
+
+         #build metadata
+
+
+         #convert parsed content -> chunks
+
+
+         #incremental weviate ingestion
+
+
+         #save manifest
+
+
+
+
+
+
