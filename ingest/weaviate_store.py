@@ -212,8 +212,13 @@ def get_collection(
                 ),
 
                 Property(
+                    name="content_type",
+                    data_type=DataType.TEXT
+                ),
+
+                Property(
                     name="source",
-                    data_type=DataType.TEXT,
+                    data_type=DataType.TEXT
                 ),
 
                 Property(
@@ -259,6 +264,11 @@ def get_collection(
                 Property(
                     name="has_images",
                     data_type=DataType.BOOL,
+                ),
+
+                Property(
+                    name="image_paths",
+                    data_type=DataType.TEXT_ARRAY
                 ),
 
                 Property(
@@ -367,6 +377,9 @@ def insert_chunks(
 
                 "content":
                     chunk.page_content,
+                
+                "content_type":
+                      chunk.metadata.get("content_type", ""),
 
                 "source":
                     chunk.metadata[
@@ -417,6 +430,9 @@ def insert_chunks(
                     chunk.metadata[
                         "has_images"
                     ],
+                
+                "image_paths":
+                     chunk.metadata.get("image_paths", []),
 
                 "page":
                     int(

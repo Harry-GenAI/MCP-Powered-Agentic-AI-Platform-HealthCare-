@@ -1,120 +1,152 @@
 import sys
+from pathlib import Path
+
+sys.path.append(
+    str(Path(__file__).resolve().parent.parent)
+)
+
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-from ingest.ingest import load_docs, create_chunks
-from langchain_community.retrievers import BM25Retriever
-from langchain_classic.retrievers import EnsembleRetriever
-
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-from utils.logger import logger
 from sentence_transformers import CrossEncoder
-import re
 
-#preprcessing fun/clean text
+from weaviate.classes.query import Filter
 
-#embedding model
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-#load vdb
-vector_db = Chroma(
-    persist_directory="./chroma_db",
-    embedding_function=embedding_model,
+from ingest.weaviate_store import (
+    connect_weaviate,
+    get_collection,
 )
 
-#Build BM25
-logger.info("Loading documents for BM25 retriever...")
-
-docs = load_docs()
-
-logger.info("Creating Chunks")
-
-chunks = create_chunks(docs)
-
-logger.info("Creating BM25 retriever")
-
-bm25_retriever = BM25Retriever.from_documents(chunks)
-
-bm25_retriever.k = 8
+from utils.logger import logger
 
 
-#Chroma Retriever
-logger.info("Creating Chroma Retriever...")
+# ============================================================
+# Configuration
+# ============================================================
 
-dense_retriever = vector_db.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k":8}
+TOP_K = 8
+FINAL_K = 3
+HYBRID_ALPHA = 0.5
+
+
+# ============================================================
+# Embedding Model
+# ============================================================
+
+embedding_model = HuggingFaceEmbeddings(
+    model_name="all-MiniLM-L6-v2"
 )
 
 
-#Hybrid Search
-logger.info("Creating Ensemble Retriever...")
+# ============================================================
+# Weaviate
+# ============================================================
 
-ensemble_retriever = EnsembleRetriever(
-    retrievers=[
-        dense_retriever,
-        bm25_retriever
-    ],
-    weights=[
-        0.5,
-        0.5
-    ]
-)
+logger.info("Connecting to Weaviate...")
 
-#Metadata Filtering
-def apply_metadata_filter(
+weaviate_client = connect_weaviate()
 
-    docs,
-
-    metadata_filter=None
-
-):
-
-    if metadata_filter is None:
-
-        return docs
-
-
-    filtered_docs = []
-
-
-    for doc in docs:
-
-        matched = all(
-
-            doc.metadata.get(key) == value
-
-            for key, value in metadata_filter.items()
-
-        )
-
-
-        if matched:
-
-            filtered_docs.append(doc)
-
-
-    logger.info(
-
-        f"Metadata Filter : {len(filtered_docs)} documents selected."
-
+if not weaviate_client.is_ready():
+    raise RuntimeError(
+        "Weaviate is not ready."
     )
 
+vector_db = get_collection(
+    weaviate_client
+)
 
-    return filtered_docs
+logger.info(
+    "Connected to Weaviate successfully."
+)
 
 
-#cross encoder
-logger.info("Loading CrossEncoder...")
+# ============================================================
+# Metadata Filtering
+# ============================================================
+
+def build_metadata_filter(
+    metadata_filter: dict | None = None
+):
+
+    if not metadata_filter:
+        return None
+
+    filters = []
+
+    for key, value in metadata_filter.items():
+
+        filters.append(
+            Filter.by_property(
+                key
+            ).equal(value)
+        )
+
+    if not filters:
+        return None
+
+    combined_filter = filters[0]
+
+    for current_filter in filters[1:]:
+
+        combined_filter = (
+            combined_filter & current_filter
+        )
+
+    return combined_filter
+
+
+# ============================================================
+# Convert Weaviate Objects → LangChain Documents
+# ============================================================
+
+def convert_to_documents(
+    objects
+):
+
+    docs = []
+
+    for obj in objects:
+
+        properties = obj.properties
+
+        metadata = {
+            key: value
+            for key, value in properties.items()
+            if key != "content"
+        }
+
+        docs.append(
+            Document(
+                page_content=properties.get(
+                    "content",
+                    ""
+                ),
+                metadata=metadata,
+            )
+        )
+
+    return docs
+
+
+# ============================================================
+# CrossEncoder
+# ============================================================
+
+logger.info(
+    "Loading CrossEncoder..."
+)
 
 reranker = CrossEncoder(
     "cross-encoder/ms-marco-MiniLM-L-6-v2"
 )
 
-#build context
-def build_context(top_docs):
+
+# ============================================================
+# Build Context
+# ============================================================
+
+def build_context(
+    top_docs
+):
 
     context = ""
     sources = []
@@ -123,52 +155,185 @@ def build_context(top_docs):
 
     for doc in top_docs:
 
-        context += f"[source:{doc.metadata.get('source')}]\n"
-        context += doc.page_content.strip()
+        source = doc.metadata.get(
+            "source"
+        )
+
+        page = doc.metadata.get(
+            "page"
+        )
+
+        context += (
+            f"[source:{source} "
+            f"page:{page}]\n"
+        )
+
+        context += (
+            doc.page_content.strip()
+        )
+
         context += "\n\n"
 
-        source = doc.metadata.get("source")
-
         if source not in seen_sources:
+
             seen_sources.add(source)
+
             sources.append(source)
 
-    logger.info(f"Context built with {len(top_docs)} chunks")
+    logger.info(
+        f"Context built with "
+        f"{len(top_docs)} chunks"
+    )
 
     return context, sources
 
 
-#retrieve fun
-def retrieve_context(query, metadata_filter:dict | None = None):
+# ============================================================
+# Retrieve Context
+# ============================================================
 
-    #Hybrid Retrieval:
-    retrieved_docs = ensemble_retriever.invoke(query)
+def retrieve_context(
+    query,
+    metadata_filter: dict | None = None
+):
 
-    #metadata filter
-    filtered_docs = apply_metadata_filter(retrieved_docs, metadata_filter)
-
-    if not filtered_docs:
-        logger.warning("No documents found after metadata filtering..")
-
-        return "No relevant compnay knowledge found", [], [], []
-
-    #reranker
-    
-    pairs = [(query, doc.page_content) for doc in filtered_docs]
-    scores = reranker.predict(pairs)
-
-    reranked = sorted(
-        zip(filtered_docs, scores),
-        key=lambda x: x[1],
-        reverse=True
+    logger.info(
+        "Starting Hybrid Retrieval..."
     )
 
-    top_docs = [doc for doc, score in reranked[:3]]
-    
-    context, sources = build_context(top_docs)
+    # --------------------------------------------------------
+    # Query Embedding
+    # --------------------------------------------------------
 
-    logger.info("Hybrid Retrieval Completed Successfully.")
+    query_vector = (
+        embedding_model.embed_query(
+            query
+        )
+    )
 
-    return context, sources, retrieved_docs, top_docs
+    # --------------------------------------------------------
+    # Metadata Filter
+    # --------------------------------------------------------
 
-    
+    weaviate_filter = (
+        build_metadata_filter(
+            metadata_filter
+        )
+    )
+
+    # --------------------------------------------------------
+    # Hybrid Search
+    # --------------------------------------------------------
+
+    response = vector_db.query.hybrid(
+
+        query=query,
+
+        vector=query_vector,
+
+        alpha=HYBRID_ALPHA,
+
+        limit=TOP_K,
+
+        filters=weaviate_filter,
+
+        return_properties=[
+            "content",
+            "content_type",
+            "source",
+            "document_type",
+            "department",
+            "access_level",
+            "patient_id",
+            "doctor_id",
+            "document_version",
+            "ingestion_type",
+            "has_tables",
+            "has_images",
+            "image_paths",
+            "page",
+            "chunk_index",
+            "source_hash",
+        ],
+    )
+
+    retrieved_docs = (
+        convert_to_documents(
+            response.objects
+        )
+    )
+
+    if not retrieved_docs:
+
+        logger.warning(
+            "No documents found."
+        )
+
+        return (
+            "No relevant company "
+            "knowledge found",
+            [],
+            [],
+            [],
+        )
+
+    logger.info(
+        f"Hybrid Retrieval returned "
+        f"{len(retrieved_docs)} chunks."
+    )
+
+    # --------------------------------------------------------
+    # Reranking
+    # --------------------------------------------------------
+
+    pairs = [
+        (
+            query,
+            doc.page_content
+        )
+        for doc in retrieved_docs
+    ]
+
+    scores = reranker.predict(
+        pairs
+    )
+
+    reranked = sorted(
+        zip(
+            retrieved_docs,
+            scores
+        ),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    # --------------------------------------------------------
+    # Top-K Evidence
+    # --------------------------------------------------------
+
+    top_docs = [
+        doc
+        for doc, score in reranked[:FINAL_K]
+    ]
+
+    # --------------------------------------------------------
+    # Build Context
+    # --------------------------------------------------------
+
+    context, sources = (
+        build_context(
+            top_docs
+        )
+    )
+
+    logger.info(
+        "Hybrid Retrieval Completed "
+        "Successfully."
+    )
+
+    return (
+        retrieved_docs,
+        top_docs,
+        sources,
+        context
+    )

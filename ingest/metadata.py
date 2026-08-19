@@ -27,15 +27,15 @@ def classify_document(file_name:str)->str:
 
     if "operations" in name:
         return "hospital_operations"
+
+    if "scanned" in name:
+        return "scanned_document"
     
     if "admission" in name:
         return "admission_report"
 
     if "discharge" in name:
         return "discharge_report"
-    
-    if "scanned" in name:
-        return "scanned_docuemnt"
     
     return "general"
 
@@ -69,7 +69,7 @@ def build_metadata(
     }
     
     #Department / Access classification
-    if document_type == "clinical":
+    if document_type == "clinical_knowledge":
 
         metadata["department"] = "clinical"
         metadata["access_level"] = "doctor"

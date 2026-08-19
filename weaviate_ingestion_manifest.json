@@ -1,0 +1,89 @@
+{
+  "01_clinical_knowledge_reference.pdf": {
+    "file_hash": "6849936dfcf35edf5ff121d43779135188a6f92c1457f2cbc12f3e29c73a3a08",
+    "object_ids": [
+      "b3776e4b-e8d4-5bfc-a6ca-080066f6fe59",
+      "d9d47070-26f0-5ff8-bb73-a92e706ecee3",
+      "5e7c0811-28d3-55c1-8fed-855d12856adb",
+      "e3ed1dba-597f-5992-b542-73c4352e1a9e",
+      "a74d3968-409a-5012-b92c-d21e34526e06",
+      "f5e94be1-bf43-5ef6-8cf9-9c42c1acf007",
+      "8ed4cd69-c378-5135-8bf9-2f3313190eec",
+      "1cd4403d-29a3-5a91-b919-ba2442482307",
+      "6f671ed0-6b83-5e3f-a735-259be20259b8",
+      "decd8fb0-f5e0-5f3c-a4f6-af9042bbe3cb",
+      "b745fb04-41ce-5a80-95e3-0682d75e7b15",
+      "c665f1bc-4ed3-5014-ba71-c328f2deb2a2",
+      "65deb082-2d2b-5d9e-9f37-eeea09d226df",
+      "102e9adf-a3b9-59f0-ac5e-b9f56e88ea78",
+      "ca6582ce-707e-5448-b94d-309d4b4ed594",
+      "5a0cc7c8-1060-532b-af80-cf218eca53a0",
+      "d3f7711a-469e-5c24-b761-dfcb310356f7",
+      "ab35f0f9-57cb-52d9-ac78-99cf222115aa",
+      "850b421a-122d-5240-b068-bff29f9869af",
+      "7dc46363-5b91-5557-b5a3-cf000fb29eb7"
+    ],
+    "chunks": 20,
+    "updated_at": "2026-08-19T00:16:24.775481+00:00"
+  },
+  "02_medical_policy_reference.pdf": {
+    "file_hash": "84f4bd7c060b5431f132d3595e1b5b11ad15d74111930f903a5e2c960656d9ba",
+    "object_ids": [
+      "9f17341d-00b6-5c50-9f13-cd4f0e653922",
+      "7519b09f-e80f-5662-bd73-5f7dd5ed4f9d",
+      "03e6f28b-dbbd-53ba-a0c6-4758849a4f52",
+      "04482b73-2d80-5755-b8cc-047f217c8362",
+      "caa7f5fe-6b3b-56b3-8775-0d53202c50d4",
+      "ef75de6d-7877-50a1-b8f3-d58a07f32513",
+      "8d308f9d-e937-5209-b457-515ea38b14af",
+      "70ef12c9-c35c-56ee-a491-a166553ce81c",
+      "369877de-d5d0-53a0-8b70-9809ce5f0aff",
+      "5872ce50-c51a-5b8c-85b1-3e677649509c",
+      "39d25eb2-3f60-5aff-a39d-bba49e9b8fd8",
+      "e02b6a8a-7f28-5bea-8f92-13c1c6d0b982",
+      "556264dc-6a0c-5734-996f-6074f0420b8b",
+      "f93f8814-2a3b-5e46-a9d9-b6516b09887f"
+    ],
+    "chunks": 14,
+    "updated_at": "2026-08-19T00:16:26.485190+00:00"
+  },
+  "03_hospital_operations_reference.pdf": {
+    "file_hash": "8f871461a459c8a2954afd07e70169c051c916bd833e894bcd0fcb8ee54beb38",
+    "object_ids": [
+      "69f495fb-21e7-5a9e-bbf7-64920b23fffe",
+      "9ca4bb31-8b3f-5263-a663-ee98c06b3b16",
+      "18790997-7b94-59e3-96c2-74b7adef8d3a",
+      "4f1f9597-505e-51e9-aa45-a07b4ed3ee90",
+      "1250e313-9d26-56d9-83bb-82b2c04a6903",
+      "e89fa704-8119-59a6-98a2-8677ea777362",
+      "96c3cfbb-443e-5780-8023-40edb2c9610c",
+      "9ddf4ad9-8d26-5dcd-9c67-3edcef14a1d4",
+      "f61fc3ca-a5a4-56c8-bb58-68c404720ba4",
+      "94b60650-32d9-5110-bbbe-28d1fa336856",
+      "651800f7-4f74-52bb-b60c-1135fdbab718",
+      "f3eb63ed-7093-5459-86bd-6e6f6d1ed06b",
+      "e7945429-ac8c-5db6-9a23-0802115cbc88",
+      "48b98d58-fa79-5542-a473-7a6b2fd1fbb6",
+      "6046ba8c-61c6-54d1-a3d3-72136c500746",
+      "7213a029-4287-53db-91d1-e5fd4cf7057f",
+      "7ceb361e-d5d0-57c9-84a3-6eaac910ad25",
+      "3af6eea1-7553-5292-8609-27c8ce4c4e62",
+      "7fa11892-c732-5723-ae7e-68fefbf4d7d4",
+      "08e23566-4208-5c57-8ebe-e44db9cc4d41",
+      "6b269acd-66b3-5945-a8eb-1c1f9ece9f9c",
+      "df115073-1393-5ee7-8bed-a8395099d7de",
+      "542c637b-2249-50b8-ad8c-cea75a0012b4"
+    ],
+    "chunks": 23,
+    "updated_at": "2026-08-19T00:16:28.609249+00:00"
+  },
+  "04_scanned_discharge_checklist_unique_patients.pdf": {
+    "file_hash": "5fee89a5efdedd3d9bf2a4bc2b0eb95ecefcc264f7be84ee2a04e9c7872d7613",
+    "object_ids": [
+      "fa7f931d-5dac-548a-9054-e4279d6bec12",
+      "92eb847f-4eb7-5ed5-98ec-af4b47fbe9f2"
+    ],
+    "chunks": 2,
+    "updated_at": "2026-08-19T00:16:33.115462+00:00"
+  }
+}
