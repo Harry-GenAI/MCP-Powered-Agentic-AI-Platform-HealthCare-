@@ -24,7 +24,7 @@
       "7dc46363-5b91-5557-b5a3-cf000fb29eb7"
     ],
     "chunks": 20,
-    "updated_at": "2026-08-19T00:16:24.775481+00:00"
+    "updated_at": "2026-08-19T16:25:03.177079+00:00"
   },
   "02_medical_policy_reference.pdf": {
     "file_hash": "84f4bd7c060b5431f132d3595e1b5b11ad15d74111930f903a5e2c960656d9ba",
@@ -45,7 +45,7 @@
       "f93f8814-2a3b-5e46-a9d9-b6516b09887f"
     ],
     "chunks": 14,
-    "updated_at": "2026-08-19T00:16:26.485190+00:00"
+    "updated_at": "2026-08-19T16:25:05.523672+00:00"
   },
   "03_hospital_operations_reference.pdf": {
     "file_hash": "8f871461a459c8a2954afd07e70169c051c916bd833e894bcd0fcb8ee54beb38",
@@ -75,7 +75,7 @@
       "542c637b-2249-50b8-ad8c-cea75a0012b4"
     ],
     "chunks": 23,
-    "updated_at": "2026-08-19T00:16:28.609249+00:00"
+    "updated_at": "2026-08-19T16:25:08.884900+00:00"
   },
   "04_scanned_discharge_checklist_unique_patients.pdf": {
     "file_hash": "5fee89a5efdedd3d9bf2a4bc2b0eb95ecefcc264f7be84ee2a04e9c7872d7613",
@@ -84,6 +84,6 @@
       "92eb847f-4eb7-5ed5-98ec-af4b47fbe9f2"
     ],
     "chunks": 2,
-    "updated_at": "2026-08-19T00:16:33.115462+00:00"
+    "updated_at": "2026-08-19T16:25:15.988817+00:00"
   }
 }

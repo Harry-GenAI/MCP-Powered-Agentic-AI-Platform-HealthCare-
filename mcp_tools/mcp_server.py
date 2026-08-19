@@ -25,23 +25,34 @@ email_sent = False
 
 
 
-#internal knowledge rag tool
+# ============================================================
+# Internal Hospital Knowledge RAG Tool
+# ============================================================
+
 @mcp.tool()
-def employee_knowledge_search(query:str)->str:
+def internal_hospital_knowledge_search(query: str) -> str:
     """
-    Search the company's internal employee knowledge base 
-    such as HR, travel, and remote work policies.
+    Search the hospital's internal knowledge base for
+    clinical knowledge, medical policies, hospital operations,
+    procedures, and other internal reference information.
     """
+
     from rag.rag import retrieve_context
+
     context, _, _, _ = retrieve_context(query)
 
-    return f"Context:{context}"
+    if not context:
+        return "No relevant internal hospital knowledge found."
+
+    return f"Context:\n{context}"
 
 
+# ============================================================
+# External Patient Services RAG Tool
+# ============================================================
 
-#external knowledge rag tool
 @mcp.tool()
-def customer_knowledge_search(query:str)->str:
+def external_patient_services_search(query:str)->str:
     """
     Search the customer-facing knowledge base including 
     refund, purchase, warranty, and shipping policies.
@@ -66,28 +77,92 @@ def customer_knowledge_search(query:str)->str:
         return f"search_documents error: {e}"
 
 
-#sql db tool
+# ============================================================
+# Staff Database Tool
+# ============================================================
+
 @mcp.tool()
-def query_database(sql:str)->str:
+def query_database(sql: str) -> str:
     """
-    query the sql db of employees
+    Query the hospital staff database for information about
+    nurses, lab technicians, and doctors, including their
+    departments, shifts, availability, rooms, experience,
+    and leave status.
     """
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     cursor.execute(sql)
+
     rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
+
+    columns = [
+        desc[0]
+        for desc in cursor.description
+    ]
+
     cursor.close()
     conn.close()
 
     if columns:
-        results = [dict(zip(columns, row)) for row in rows]
-        return json.dumps(results, indent=2)
-    
-    results = json.dumps(rows, indent=2)
+        results = [
+            dict(zip(columns, row))
+            for row in rows
+        ]
 
-    return results
+        return json.dumps(
+            results,
+            indent=2
+        )
+
+    return json.dumps(
+        rows,
+        indent=2
+    )
+
+
+
+# ============================================================
+# web search tool
+# ============================================================
+
+@mcp.tool()
+def web_search(query: str) -> str:
+
+    url = "https://html.duckduckgo.com/html/"
+
+    response = requests.get(
+        url,
+        params={"q": query},
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=10
+    )
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    results = soup.select(".result__snippet")
+
+    if results:
+        return "\n".join(
+            result.get_text(" ", strip=True)
+            for result in results[:5]
+        )
+
+    return "No search results found"
+
+
+#text cleaner tool
+@mcp.tool()
+def text_cleaner(text:str)->str:
+    """
+    validate and refine the output
+    """
+    return " ".join(text.split())
+
+
+if __name__ == "__main__":
+    mcp.run()
 
 
 #email send tool
@@ -130,43 +205,3 @@ def send_email(to:str, subject:str, body:str)->str:
     
     except Exception as e:
         return f"Email failed:{e}"
-
-
-
-#web search tool
-@mcp.tool()
-def web_search(query: str) -> str:
-
-    url = "https://html.duckduckgo.com/html/"
-
-    response = requests.get(
-        url,
-        params={"q": query},
-        headers={"User-Agent": "Mozilla/5.0"},
-        timeout=10
-    )
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    results = soup.select(".result__snippet")
-
-    if results:
-        return "\n".join(
-            result.get_text(" ", strip=True)
-            for result in results[:5]
-        )
-
-    return "No search results found"
-
-
-#text cleaner tool
-@mcp.tool()
-def text_cleaner(text:str)->str:
-    """
-    validate and refine the output
-    """
-    return " ".join(text.split())
-
-
-if __name__ == "__main__":
-    mcp.run()

@@ -257,9 +257,11 @@ def retrieve_context(
         ],
     )
 
+    objects = response.objects
+
     retrieved_docs = (
         convert_to_documents(
-            response.objects
+            objects
         )
     )
 
