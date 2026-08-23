@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 import json
@@ -20,7 +21,7 @@ load_dotenv()
 mcp = FastMCP()
 
 RAG_URL = "http://localhost:8000/rag"
-DB_PATH = "employees.db"
+DB_PATH = PROJECT_ROOT / "staff.db"
 email_sent = False
 
 
@@ -39,7 +40,7 @@ def internal_hospital_knowledge_search(query: str) -> str:
 
     from rag.rag import retrieve_context
 
-    context, _, _, _ = retrieve_context(query)
+    _, _, _, context = retrieve_context(query)
 
     if not context:
         return "No relevant internal hospital knowledge found."
@@ -161,10 +162,6 @@ def text_cleaner(text:str)->str:
     return " ".join(text.split())
 
 
-if __name__ == "__main__":
-    mcp.run()
-
-
 #email send tool
 @mcp.tool()
 def send_email(to:str, subject:str, body:str)->str:
@@ -205,3 +202,7 @@ def send_email(to:str, subject:str, body:str)->str:
     
     except Exception as e:
         return f"Email failed:{e}"
+
+
+if __name__ == "__main__":
+    mcp.run()

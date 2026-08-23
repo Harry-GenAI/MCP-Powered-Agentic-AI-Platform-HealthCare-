@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 from contextlib import AsyncExitStack
 
@@ -33,7 +34,7 @@ async def init_mcp():
     await _stack.__aenter__()
 
     server_params = StdioServerParameters(
-        command="python",
+        command=sys.executable,
         args=[str(SERVER_PATH)],
     )
 

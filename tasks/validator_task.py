@@ -1,25 +1,43 @@
 from crewai import Task
 
 
-def validator_task(agent, context):
-
+def validator_task(
+    user_query,
+    context,
+    answer,
+    sources,
+    agent
+):
     return Task(
-
         description=f"""
-        Validate the following response.
+Validate the generated response against the available evidence.
 
-        {context}
+User Query:
+{user_query}
 
-        Improve formatting.
+Retrieved Context:
+{context}
 
-        Remove duplicate information.
+Generated Answer:
+{answer}
 
-        Preserve factual correctness.
+Sources:
+{sources}
 
-        Return final response.
-        """,
+Check that the answer:
+- addresses the user's query
+- is supported by the available context
+- does not introduce unsupported facts
+- is clear and professionally formatted
 
-        expected_output="Clean final answer.",
-
+If the answer is sufficient, approve it.
+If important information is missing or the answer is not
+adequately grounded, identify the reason for retry.
+""",
+        expected_output="""
+A validation result containing:
+- validation status
+- reason
+""",
         agent=agent
     )

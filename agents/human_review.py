@@ -1,25 +1,36 @@
 from crewai import Agent
 
 
-def human_review_agent():
+def human_review():
 
     return Agent(
-
+        
         role="Human Review Agent",
-
+        
         goal="""
-        Protect sensitive company information.
+        Manage the human approval process for requests that
+        have already been identified as requiring human review.
         """,
 
         backstory="""
-        Before allowing access to confidential employee
-        information such as salary, joining date,
-        notice period, phone number, email, manager details 
-        or other sensitive records, require OTP approval.
+        You handle the requestes that have already been routed
+        to human review by the Orchestrator.
 
-        Only after successful verification should
-        the SQL tool be executed.
+        Your Responsibilties are:
+
+        - Present the User request and retrieved evidence
+          to the Authorized reviewer.
+        - wait for reviewer's decision.
+        - Accept the one of three decisions:
+          approve, edit or reject.
+        - Return the review decision to the workflow.
+
+        You dont independently decide whether a request requires
+        human review.
         """,
 
         verbose=True
+
+
+
     )

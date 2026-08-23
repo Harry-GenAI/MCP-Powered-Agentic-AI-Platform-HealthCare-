@@ -1,45 +1,61 @@
+
 from crewai import Task
 
-def orchestrator_task(agent, query):
 
+
+def orchestrator_task(
+    user_request,
+    user_role,
+    conversation_history,
+    agent
+):
     return Task(
         description=f"""
-        Analyze the following request.
+Analyze the user's request and determine:
 
-        User Request:
-        {query}
+1. request_type
+2. route
+3. risk_level
 
-        Decide ONLY ONE route:
+User Query:
+{user_request}
 
-        - employee_knowledge_search
-        - customer_knowledge_search
-        - query_database
-        - send_email
-        - web_search
-        - text_cleaner
+User Role:
+{user_role}
 
-        IMPORTANT ROUTING RULE:
+Conversation History:
+{conversation_history}
 
-        If the user query contains an employee leave code such as
-        LV-101, LV-102, LV-103, etc.,
-        ALWAYS route to:
+Return a structured routing decision.
 
-        employee_knowledge_search
+request_type must be one of:
+- clinical
+- business
+- appointment
+- general
 
-        These LV-xxx codes refer to employee leave-policy information,
-        NOT database queries.
+route must be one of:
+- internal_rag
+- external_rag
+- query_database
+- web_search
+- appointment
 
-        Examples:
-        LV-101 -> employee_knowledge_search
-        LV-102 -> employee_knowledge_search
-        LV-103 -> employee_knowledge_search
+risk_level must be one of:
+- low
+- high
 
-        Return ONLY the route name.
+Do not answer the user's question.
+Only classify and route the request.
+""",
 
-        Do not answer the User.
-        Do not explain.
-        """,
+        expected_output="""
+A structured routing decision containing:
 
-        expected_output="Only one route name from the allowed routes.",
+- request_type
+- route
+- risk_level
+""",
+
         agent=agent
     )
