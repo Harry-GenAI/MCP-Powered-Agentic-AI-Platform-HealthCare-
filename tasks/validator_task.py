@@ -30,14 +30,19 @@ Check that the answer:
 - does not introduce unsupported facts
 - is clear and professionally formatted
 
-If the answer is sufficient, approve it.
+If the answer is sufficient, set validation_status to valid.
 If important information is missing or the answer is not
-adequately grounded, identify the reason for retry.
+adequately grounded, set validation_status to invalid and identify the
+reason for retry.
+
+Return only valid JSON. Do not wrap it in Markdown.
 """,
         expected_output="""
-A validation result containing:
-- validation status
-- reason
+A JSON object with exactly these keys:
+{
+  "validation_status": "valid or invalid",
+  "validation_reason": "short explanation"
+}
 """,
         agent=agent
     )

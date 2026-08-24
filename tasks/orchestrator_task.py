@@ -47,14 +47,17 @@ risk_level must be one of:
 
 Do not answer the user's question.
 Only classify and route the request.
+
+Return only valid JSON. Do not wrap it in Markdown.
 """,
 
         expected_output="""
-A structured routing decision containing:
-
-- request_type
-- route
-- risk_level
+A JSON object with exactly these keys:
+{
+  "request_type": "clinical, business, appointment, or general",
+  "route": "internal_rag, external_rag, query_database, web_search, or appointment",
+  "risk_level": "low or high"
+}
 """,
 
         agent=agent

@@ -33,21 +33,22 @@ def human_review_task(
         Sources:
         {sources}
 
-        Wait for the authorized reviewers decision.
+        Wait for the authorized reviewer's decision.
         The reviewer can:
         - approve
         - modify
         - reject
 
-        Return the reviewrs decision and feedback to the workflow
+        Return only valid JSON. Do not wrap it in Markdown.
         """
         ,
 
-        expected_output="""A structured human review decision containing:
-
-        - review_status: approved, modified, or rejected
-        - reviewer_feedback
-        - modified_answer, when the reviewer modifies the answer
+        expected_output="""A JSON object with exactly these keys:
+        {
+          "review_status": "approved, modified, or rejected",
+          "reviewer_feedback": "short feedback",
+          "modified_answer": "modified answer, or empty string"
+        }
         """,
 
         agent=agent

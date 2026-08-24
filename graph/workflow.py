@@ -20,7 +20,7 @@ from graph.routers import (
     route_after_orchestrator,
     route_after_response,
     route_after_validation,
-    route_after_review
+    route_after_review,
 )
 
 from dotenv import load_dotenv
@@ -159,8 +159,14 @@ builder.add_conditional_edges(
     {
         "end": END,
         "retry": "retry",
-        
+        "max_retry": "rejected",
     }
+)
+
+
+builder.add_edge(
+    "retry",
+    "response"
 )
 
 

@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import json
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
@@ -31,9 +32,10 @@ def validator_node(state: AgentState) -> AgentState:
     )
 
     result = task.agent.execute_task(task)
+    data = json.loads(getattr(result, "raw", result))
 
     return {
-        "validation_status": result.validation_status,
-        "validation_reason": result.validation_reason,
+        "validation_status": data["validation_status"],
+        "validation_reason": data["validation_reason"],
         "final_answer": answer,
     }

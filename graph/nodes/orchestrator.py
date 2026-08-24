@@ -20,7 +20,7 @@ def orchestrator_node(state:AgentState)-> AgentState:
     )
 
     result = task.agent.execute_task(task)
-    data = json.loads(result)
+    data = json.loads(getattr(result, "raw", result))
 
     return {
         "route":data["route"],

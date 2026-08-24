@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import json
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
@@ -31,9 +32,10 @@ def human_review_node(state: AgentState) -> AgentState:
     )
 
     result = task.agent.execute_task(task)
+    data = json.loads(getattr(result, "raw", result))
 
     return {
-        "review_status": result.review_status,
-        "reviewer_feedback": result.reviewer_feedback,
-        "modified_answer": result.modified_answer,
+        "review_status": data["review_status"],
+        "reviewer_feedback": data["reviewer_feedback"],
+        "modified_answer": data.get("modified_answer", ""),
     }
