@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from typing import TypedDict, Any
+from typing import TypedDict
 
 
 class AgentState(TypedDict, total=False):
@@ -22,7 +22,7 @@ class AgentState(TypedDict, total=False):
 
     # RAG
     context : str
-    sources : str
+    sources : list
 
 
     # Tools  sql/websearch/External RAG

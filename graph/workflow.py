@@ -14,12 +14,18 @@ from graph.nodes.response import response_node
 from graph.nodes.human_review import human_review_node
 from graph.nodes.validator import validator_node
 from graph.nodes.rejection import rejection_node
+from graph.nodes.retry import retry_node
 
 from graph.routers import (
     route_after_orchestrator,
     route_after_response,
     route_after_validation,
+    route_after_review
 )
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # ============================================================
@@ -153,17 +159,7 @@ builder.add_conditional_edges(
     {
         "end": END,
         "retry": "retry",
-        "max_retry": "rejection"
-    }
-)
-
-
-builder.add_conditional_edges(
-    "validator",
-    route_after_validation,
-    {
-        "end": END,
-        "retry": "response",
+        
     }
 )
 

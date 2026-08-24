@@ -1,3 +1,8 @@
+from pathlib import Path
+import sys
+
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+
 from graph.state import AgentState
 
 from agents.validator_agent import validator_agent

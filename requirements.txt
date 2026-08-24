@@ -36,3 +36,8 @@ PyMuPDF
 pdfplumber
 pytesseract
 Pillow
+
+
+crewai
+langgraph
+langgraph-checkpoint-sqlite

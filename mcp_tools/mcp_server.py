@@ -26,27 +26,6 @@ email_sent = False
 
 
 
-# ============================================================
-# Internal Hospital Knowledge RAG Tool
-# ============================================================
-
-@mcp.tool()
-def internal_hospital_knowledge_search(query: str) -> str:
-    """
-    Search the hospital's internal knowledge base for
-    clinical knowledge, medical policies, hospital operations,
-    procedures, and other internal reference information.
-    """
-
-    from rag.rag import retrieve_context
-
-    _, _, _, context = retrieve_context(query)
-
-    if not context:
-        return "No relevant internal hospital knowledge found."
-
-    return f"Context:\n{context}"
-
 
 # ============================================================
 # External Patient Services RAG Tool

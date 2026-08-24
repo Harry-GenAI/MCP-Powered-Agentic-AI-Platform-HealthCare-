@@ -13,7 +13,7 @@ def human_review():
         """,
 
         backstory="""
-        You handle the requestes that have already been routed
+        You handle the requests that have already been routed
         to human review by the Orchestrator.
 
         Your Responsibilties are:

@@ -1,5 +1,6 @@
-from pathlib import path
+from pathlib import Path
 import sys
+import json
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
@@ -19,8 +20,9 @@ def orchestrator_node(state:AgentState)-> AgentState:
     )
 
     result = task.agent.execute_task(task)
+    data = json.loads(result)
 
     return {
-        "route":result.route,
-        "risk_level":result.risk_level
+        "route":data["route"],
+        "risk_level":data["risk_level"]
     }
