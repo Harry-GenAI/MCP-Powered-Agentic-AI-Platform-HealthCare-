@@ -6,8 +6,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from graph.state import AgentState
 
-from agents.human_review import human_review
-from tasks.human_review_task import human_review_task
+from graph.agents import human_review
+from graph.tasks import human_review_task
 
 
 def human_review_node(state: AgentState) -> AgentState:

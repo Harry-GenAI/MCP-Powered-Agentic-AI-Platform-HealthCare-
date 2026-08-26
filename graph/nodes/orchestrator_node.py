@@ -5,8 +5,8 @@ import json
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from graph.state import AgentState
-from agents.orchestrator import orchestrator_agent
-from tasks.orchestrator_task import orchestrator_task
+from graph.agents import orchestrator_agent
+from graph.tasks import orchestrator_task
 
 
 def orchestrator_node(state:AgentState)-> AgentState:
@@ -20,7 +20,9 @@ def orchestrator_node(state:AgentState)-> AgentState:
     )
 
     result = task.agent.execute_task(task)
+    print(f"\nresult\n")
     data = json.loads(getattr(result, "raw", result))
+    print(f"\ndata\n")
 
     return {
         "route":data["route"],

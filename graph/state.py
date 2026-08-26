@@ -23,6 +23,7 @@ class AgentState(TypedDict, total=False):
     # RAG
     context : str
     sources : list
+    retrieval_status : str
 
 
     # Tools  sql/websearch/External RAG

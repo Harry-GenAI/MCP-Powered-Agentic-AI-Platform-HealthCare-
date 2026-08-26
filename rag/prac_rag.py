@@ -4,6 +4,13 @@ while True:
     
     query = input("\n enter query: ")
 
-    retrieved_docs, top_docs, context, sources = retrieve_context(query)
+    result = retrieve_context(query)
 
-    print(f"\n retrieved docs:\n {retrieved_docs} \n\n top_docs:\n{top_docs} \n\n Context:\n{context} \n\n sources:\n{sources}")
+    print(
+        f"\n retrieved docs:\n {result['retrieved_docs']}"
+        f"\n\n top_docs:\n{result['top_docs']}"
+        f"\n\n Context:\n{result['context']}"
+        f"\n\n sources:\n{result['sources']}"
+        f"\n\n retrieval_status:{result['retrieval_status']}"
+        f"\n\n Score:{result['retrieval_score']}"
+    )

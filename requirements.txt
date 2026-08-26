@@ -36,6 +36,7 @@ PyMuPDF
 pdfplumber
 pytesseract
 Pillow
+weaviate-client
 
 
 crewai

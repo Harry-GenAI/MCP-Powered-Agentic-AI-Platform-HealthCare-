@@ -8,24 +8,24 @@ from graph.state import AgentState
 from rag.rag import retrieve_context
 
 
-def rag_node(state: AgentState) -> AgentState:
+def rag_node(state:AgentState)->AgentState:
 
     query = state.get(
         "rewritten_query",
         state["user_query"]
     )
 
-    (
-        _retrieved_docs,
-        _top_docs,
-        sources,
-        context
-    ) = retrieve_context(query)
+    result = retrieve_context(query)
 
     return {
-        "context": context,
-        "sources": sources,
+        "context": result["context"],
+        "sources": result["sources"],
+        "retrieval_status":result["retrieval_status"]
     }
+
+
+data = rag_node()
+print(data)
 
 
 

@@ -6,8 +6,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from graph.state import AgentState
 
-from agents.validator_agent import validator_agent
-from tasks.validator_task import validator_task
+from graph.agents import validator_agent
+from graph.tasks import validator_task
 
 
 def validator_node(state: AgentState) -> AgentState:

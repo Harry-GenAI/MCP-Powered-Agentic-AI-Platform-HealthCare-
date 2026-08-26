@@ -27,6 +27,10 @@ TOP_K = 8
 FINAL_K = 3
 HYBRID_ALPHA = 0.5
 
+# Initial threshold for staged testing.
+# Tune this only after observing your actual reranker scores.
+RERANK_THRESHOLD = 0.5
+
 
 # ============================================================
 # Embedding Model
@@ -195,7 +199,7 @@ def build_context(
 def retrieve_context(
     query,
     metadata_filter: dict | None = None
-):
+)->dict[str, object]:
 
     logger.info(
         "Starting Hybrid Retrieval..."
@@ -265,19 +269,24 @@ def retrieve_context(
         )
     )
 
+    # --------------------------------------------------------
+    # No Retrieval Results
+    # --------------------------------------------------------
+
     if not retrieved_docs:
 
         logger.warning(
             "No documents found."
         )
 
-        return (
-            "No relevant company "
-            "knowledge found",
-            [],
-            [],
-            [],
-        )
+        return {
+            "retrieved_docs": [],
+            "top_docs": [],
+            "sources": [],
+            "context": "",
+            "retrieval_status": "insufficient",
+            "retrieval_score": None,
+        }
 
     logger.info(
         f"Hybrid Retrieval returned "
@@ -310,6 +319,39 @@ def retrieve_context(
     )
 
     # --------------------------------------------------------
+    # Best Retrieval Score
+    # --------------------------------------------------------
+
+    top_score = float(
+        reranked[0][1]
+    )
+
+    logger.info(
+        f"Top reranker score: {top_score}"
+    )
+
+    # --------------------------------------------------------
+    # Retrieval Sufficiency Check
+    # --------------------------------------------------------
+
+    if top_score < RERANK_THRESHOLD:
+
+        logger.warning(
+            "Retrieval confidence insufficient. "
+            f"Score={top_score}, "
+            f"Threshold={RERANK_THRESHOLD}"
+        )
+
+        return {
+            "retrieved_docs": retrieved_docs,
+            "top_docs": [],
+            "sources": [],
+            "context": "",
+            "retrieval_status": "insufficient",
+            "retrieval_score": top_score,
+        }
+
+    # --------------------------------------------------------
     # Top-K Evidence
     # --------------------------------------------------------
 
@@ -329,13 +371,19 @@ def retrieve_context(
     )
 
     logger.info(
+        "Retrieval confidence sufficient."
+    )
+
+    logger.info(
         "Hybrid Retrieval Completed "
         "Successfully."
     )
 
-    return (
-        retrieved_docs,
-        top_docs,
-        sources,
-        context
-    )
+    return {
+        "retrieved_docs": retrieved_docs,
+        "top_docs": top_docs,
+        "sources": sources,
+        "context": context,
+        "retrieval_status": "sufficient",
+        "retrieval_score": top_score,
+    }

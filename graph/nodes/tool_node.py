@@ -20,7 +20,7 @@ async def tool_node(state: AgentState) -> AgentState:
     tool_map = {
         "query_database": "query_database",
         "web_search": "web_search",
-        "external_rag": "external_patient_services_search",
+        "vendor_rag": "vendor_rag",
     }
 
     tool_name = tool_map.get(route)

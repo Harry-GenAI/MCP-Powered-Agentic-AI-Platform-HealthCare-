@@ -4,15 +4,12 @@ import asyncio
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
 from graph.workflow import builder
-from graph.checkpointer import create_checkpointer
 from mcp_tools.mcp_client import close_mcp
 
 async def main():
-    checkpointer = create_checkpointer()
-    graph = builder.compile(checkpointer)
-
-
     config = {
         "configurable": {
             "thread_id": "test-001"
@@ -41,10 +38,13 @@ async def main():
         "retry_count": 0,
     }
 
-    try:
-        result = await graph.ainvoke(initial_state, config=config)
-        print("\n final result:\n", result)
-    finally:
-        await close_mcp()
+    async with AsyncSqliteSaver.from_conn_string("memory/langgraph_checkpoints.db") as checkpointer:
+        graph = builder.compile(checkpointer)
+
+        try:
+            result = await graph.ainvoke(initial_state, config=config)
+            print("\n final result:\n", result)
+        finally:
+            await close_mcp()
 
 asyncio.run(main())
