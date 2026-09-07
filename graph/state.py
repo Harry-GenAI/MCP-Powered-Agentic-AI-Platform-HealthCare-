@@ -10,6 +10,7 @@ class AgentState(TypedDict, total=False):
 
     # User / Session
     user_query : str
+    rewritten_query : str
     user_role : str
     conversation_history : list
 
@@ -18,6 +19,14 @@ class AgentState(TypedDict, total=False):
     request_type: str
     route: str
     risk_level: str
+
+
+    # Appointment
+    appointment_doctor : str
+    appointment_specialization : str
+    appointment_date : str
+    appointment_time : str
+    appointment_result : str
 
 
     # RAG

@@ -47,4 +47,6 @@ async def main():
         finally:
             await close_mcp()
 
-asyncio.run(main())
+while True:
+    
+    asyncio.run(main())

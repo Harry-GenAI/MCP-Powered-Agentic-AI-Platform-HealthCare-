@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph, START, END
 
 from graph.state import AgentState
 
+
 from graph.nodes.orchestrator import orchestrator_node
 from graph.nodes.rag import rag_node
 from graph.nodes.tool import tool_node
@@ -15,9 +16,12 @@ from graph.nodes.human_review import human_review_node
 from graph.nodes.validator import validator_node
 from graph.nodes.rejection import rejection_node
 from graph.nodes.retry import retry_node
+from graph.nodes.retry_exhausted_node import retry_exhausted_node
+from graph.nodes.appointment_node import appointment_node
 
 from graph.routers import (
     route_after_orchestrator,
+    route_after_rag,
     route_after_response,
     route_after_validation,
     route_after_review,
@@ -42,6 +46,11 @@ builder = StateGraph(AgentState)
 builder.add_node(
     "orchestrator",
     orchestrator_node
+)
+
+builder.add_node(
+    "appointment",
+    appointment_node
 )
 
 builder.add_node(
@@ -79,6 +88,10 @@ builder.add_node(
     validator_node
 )
 
+builder.add_node(
+    "retry_exhausted",
+    retry_exhausted_node
+)
 
 # ============================================================
 # Entry Point
@@ -100,6 +113,7 @@ builder.add_conditional_edges(
     {
         "rag": "rag",
         "tool": "tool",
+        "appointment" : "appointment"
     }
 )
 
@@ -108,9 +122,13 @@ builder.add_conditional_edges(
 # Retrieval / Tool → Response
 # ============================================================
 
-builder.add_edge(
+builder.add_conditional_edges(
     "rag",
-    "response"
+    route_after_rag,
+    {
+        "response":"response",
+        "tool":"tool"
+    }
 )
 
 builder.add_edge(
@@ -157,9 +175,9 @@ builder.add_conditional_edges(
     "validator",
     route_after_validation,
     {
-        "end": END,
-        "retry": "retry",
-        "max_retry": "rejected",
+        "retry":"retry",
+        "end":END,
+        "retry_exhausted":"retry_exhausted"
     }
 )
 
@@ -174,6 +192,21 @@ builder.add_edge(
     "rejected",
     END
 )
+
+builder.add_edge(
+    "retry_exhausted", END
+)
+
+
+# ============================================================
+# Appointment → END
+# ============================================================
+
+builder.add_edge(
+    "appointment",
+    END
+)
+
 
 
 # ============================================================

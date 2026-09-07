@@ -2,7 +2,6 @@ from crewai import Agent
 
 
 
-
 #Orchestrator Agent
 
 def orchestrator_agent():
@@ -269,11 +268,11 @@ def validator_agent():
 
         If the answer passes these checks:
 
-        Return PASS and the validated response.
+        Return valid and the validated response.
 
         If the answer fails:
 
-        Return FAIL and briefly explain what is wrong or missing.
+        Return invalid and briefly explain what is wrong or missing.
         Do not invent missing information.
 
         The workflow will decide whether to retry retrieval,
@@ -284,4 +283,55 @@ def validator_agent():
         """,
 
         verbose=True
+    )
+
+
+#Appointment Agent
+
+def appointment_agent():
+    
+    return Agent(
+
+      role="Hopsital Appointment Coordinator",
+
+      goal="""
+      Extract the required appoinment information
+      from the user's request.
+
+      Do not book the appointment yourself.
+      Return only the structured appointment details.
+      """,
+
+      backstory="""
+      You are responsible for understanding natural-language
+        appointment requests in a hospital system.
+
+        Extract:
+
+        - doctor name
+        - specialization
+        - appointment date
+        - appointment time
+
+        Example:
+
+        User:
+        "Book me with cardiologist Ramesh tomorrow at 10 AM."
+
+        Extract:
+
+        doctor = Ramesh
+        specialization = cardiologist
+        appointment_date = the requested date
+        appointment_time = 10:00
+
+        Do not generate SQL.
+        Do not perform the booking.
+        Only extract the appointment information.
+      
+      """,
+
+      verbose=True
+
+
     )

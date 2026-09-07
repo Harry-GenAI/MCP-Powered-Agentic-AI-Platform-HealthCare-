@@ -10,6 +10,8 @@ from graph.agents import validator_agent
 from graph.tasks import validator_task
 
 
+
+
 def validator_node(state: AgentState) -> AgentState:
 
     answer = (
@@ -18,7 +20,7 @@ def validator_node(state: AgentState) -> AgentState:
     )
 
     task = validator_task(
-        user_query=state["user_query"],
+        user_query=state["rewritten_query"],
         context=state.get(
             "context",
             ""

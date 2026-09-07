@@ -215,3 +215,47 @@ A JSON object with exactly these keys:
 """,
         agent=agent
     )
+
+
+
+
+# Appointment Task
+
+def appointment_task(
+    user_request,
+    agent
+):
+
+    return Task(
+        description=f"""
+Extract the appointment information from the user's request.
+
+User Request:
+{user_request}
+
+Extract:
+
+1. doctor
+2. specialization
+3. appointment_date
+4. appointment_time
+
+Return only valid JSON.
+
+Do not generate SQL.
+Do not book the appointment.
+""",
+
+        expected_output="""
+A JSON object with exactly these keys:
+
+{
+    "doctor": "doctor name",
+    "specialization": "specialization",
+    "appointment_date": "YYYY-MM-DD",
+    "appointment_time": "HH:MM"
+}
+""",
+
+        agent=agent
+    )

@@ -9,10 +9,11 @@ from graph.agents import orchestrator_agent
 from graph.tasks import orchestrator_task
 
 
+
 def orchestrator_node(state:AgentState)-> AgentState:
 
     task = orchestrator_task(
-        user_request=state["user_query"],
+        user_request=state["rewritten_query"],
         user_role=state["user_role"],
         conversation_history=state["conversation_history"],
         agent=orchestrator_agent()

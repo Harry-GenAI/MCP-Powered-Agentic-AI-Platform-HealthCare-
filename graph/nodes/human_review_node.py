@@ -10,10 +10,11 @@ from graph.agents import human_review
 from graph.tasks import human_review_task
 
 
+
 def human_review_node(state: AgentState) -> AgentState:
 
     task = human_review_task(
-        user_query=state["user_query"],
+        user_query=state["rewritten_query"],
         draft_answer=state["draft_answer"],
         risk_level=state["risk_level"],
         user_role=state.get(

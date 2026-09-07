@@ -1,4 +1,10 @@
+from pathlib import Path
+import sys
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from graph.state import AgentState
+from utils.logger import logger
 
 
 def route_after_orchestrator(state: AgentState):
@@ -14,10 +20,26 @@ def route_after_orchestrator(state: AgentState):
         "web_search",
     }:
         return "tool"
+    
+    if route == "appointment":
+        return "appointment"
 
     raise ValueError(
         f"Unknown route: {route}"
     )
+
+
+
+def route_after_rag(state:AgentState):
+
+    if state["retrieval_status"] == "sufficient":
+        return "response"
+    
+    else:
+        logger.info("retrieval status is insufficient so triggering the websearch for better information...")
+        state["route"] = "web_search"
+        return "tool"
+
 
 
 def route_after_response(state: AgentState):
@@ -58,6 +80,6 @@ def route_after_validation(state: AgentState):
     retry_count = state.get("retry_count", 0)
 
     if retry_count >= MAX_RETRIES:
-        return "max_retry"
+        return "retry_exhausted"
 
     return "retry"

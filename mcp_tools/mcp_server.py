@@ -132,6 +132,7 @@ def web_search(query: str) -> str:
     return "No search results found"
 
 
+
 #text cleaner tool
 @mcp.tool()
 def text_cleaner(text:str)->str:
@@ -139,6 +140,93 @@ def text_cleaner(text:str)->str:
     validate and refine the output
     """
     return " ".join(text.split())
+
+
+# ============================================================
+# Appointment Booking Tool
+# ============================================================
+
+@mcp.tool()
+def book_appointment(
+    doctor: str,
+    specialization: str,
+    appointment_date: str,
+    appointment_time: str
+) -> str:
+
+    conn = sqlite3.connect(DB_PATH)
+
+    cursor = conn.cursor()
+
+    # --------------------------------------------------------
+    # Check doctor availability
+    # --------------------------------------------------------
+
+    cursor.execute(
+        """
+        SELECT appointment_id
+        FROM appointments
+        WHERE doctor = ?
+        AND appointment_date = ?
+        AND appointment_time = ?
+        AND status = 'booked'
+        """,
+        (
+            doctor,
+            appointment_date,
+            appointment_time
+        )
+    )
+
+    existing = cursor.fetchone()
+
+    if existing:
+
+        cursor.close()
+        conn.close()
+
+        return (
+            "Appointment slot is already booked."
+        )
+
+    # --------------------------------------------------------
+    # Book appointment
+    # --------------------------------------------------------
+
+    cursor.execute(
+        """
+        INSERT INTO appointments (
+            doctor,
+            specialization,
+            appointment_date,
+            appointment_time,
+            status
+        )
+        VALUES (?, ?, ?, ?, 'booked')
+        """,
+        (
+            doctor,
+            specialization,
+            appointment_date,
+            appointment_time
+        )
+    )
+
+    appointment_id = cursor.lastrowid
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return (
+        f"Appointment booked successfully. "
+        f"Appointment ID: {appointment_id}. "
+        f"Doctor: {doctor}. "
+        f"Specialization: {specialization}. "
+        f"Date: {appointment_date}. "
+        f"Time: {appointment_time}."
+    )
 
 
 #email send tool

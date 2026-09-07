@@ -1,8 +1,4 @@
-x = "text"
-y = "next"
 
-print(
-    f"hello"
-    f"{y}"
+data = True & False
 
-)
+print(data)

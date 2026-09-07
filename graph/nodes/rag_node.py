@@ -8,6 +8,7 @@ from graph.state import AgentState
 from rag.rag import retrieve_context
 
 
+
 def rag_node(state:AgentState)->AgentState:
 
     query = state.get(

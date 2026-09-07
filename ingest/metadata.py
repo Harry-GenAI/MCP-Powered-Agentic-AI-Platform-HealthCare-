@@ -1,7 +1,7 @@
 import re
 
 # ============================================================
-# Extract Metadata Value
+# Extract Patient/Doctor id's Value From Text
 # ============================================================
 def extract_value(text:str, pattern:str)->str:
 

@@ -74,6 +74,28 @@ def create_tables():
     """)
 
     # --------------------------------------------------------
+    # Appiontments
+    # --------------------------------------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS appointments (
+
+            appointment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            doctor TEXT NOT NULL,
+
+            specialization TEXT NOT NULL,
+
+            appointment_date TEXT NOT NULL,
+
+            appointment_time TEXT NOT NULL,
+
+            status TEXT NOT NULL
+        )
+    """)
+
+
+    # --------------------------------------------------------
     # Doctors
     # --------------------------------------------------------
 
@@ -97,6 +119,9 @@ def create_tables():
     conn.close()
 
     logger.info("Staff database tables created successfully.")
+
+
+    
 
 
 # ============================================================

@@ -134,11 +134,6 @@ def create_chunks(
         "image_paths_by_page",
         {}
     )
-
-    image_paths_by_page = metadata.get(
-    "image_paths_by_page",
-    {}
-    )
     
     #to avoid img path in each and every chunk while unpacking at the time of creating document
     base_metadata = {
@@ -285,8 +280,7 @@ def create_chunks(
                 page_table_text
             )
 
-            # Each blank-line-separated table row
-            # becomes one logical table chunk.
+            # Each blank-line-separated table row becomes one logical table chunk.
             table_rows = [
                 row.strip()
                 for row in re.split(

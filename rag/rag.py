@@ -28,7 +28,7 @@ FINAL_K = 3
 HYBRID_ALPHA = 0.5
 
 # Initial threshold for staged testing.
-# Tune this only after observing your actual reranker scores.
+# Tune this only after observing actual reranker scores.
 RERANK_THRESHOLD = 0.5
 
 
