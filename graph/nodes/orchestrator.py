@@ -10,7 +10,7 @@ from graph.tasks import orchestrator_task
 
 
 
-def orchestrator_node(state:AgentState)-> AgentState:
+async def orchestrator_node(state:AgentState)-> AgentState:
 
     task = orchestrator_task(
         user_request=state["rewritten_query"],
@@ -20,7 +20,7 @@ def orchestrator_node(state:AgentState)-> AgentState:
 
     )
 
-    result = task.agent.execute_task(task)
+    result = await task.agent.aexecute_task(task)
     print(f"\nresult\n")
     data = json.loads(getattr(result, "raw", result))
     print(f"\ndata\n")

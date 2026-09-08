@@ -25,10 +25,6 @@ def rag_node(state:AgentState)->AgentState:
     }
 
 
-data = rag_node()
-print(data)
-
-
 
 
 

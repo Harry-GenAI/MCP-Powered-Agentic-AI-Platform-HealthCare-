@@ -25,7 +25,7 @@ async def appointment_node(
         agent=appointment_agent()
     )
 
-    result = task.agent.execute_task(task)
+    result = await task.agent.aexecute_task(task)
 
     data = json.loads(
         getattr(result, "raw", result)

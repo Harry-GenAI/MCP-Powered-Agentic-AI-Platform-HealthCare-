@@ -16,8 +16,8 @@ from graph.nodes.human_review import human_review_node
 from graph.nodes.validator import validator_node
 from graph.nodes.rejection import rejection_node
 from graph.nodes.retry import retry_node
-from graph.nodes.retry_exhausted_node import retry_exhausted_node
-from graph.nodes.appointment_node import appointment_node
+from graph.nodes.retry_exhausted import retry_exhausted_node
+from graph.nodes.appointment import appointment_node
 
 from graph.routers import (
     route_after_orchestrator,

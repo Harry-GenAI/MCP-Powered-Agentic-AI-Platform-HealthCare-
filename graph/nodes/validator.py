@@ -12,7 +12,7 @@ from graph.tasks import validator_task
 
 
 
-def validator_node(state: AgentState) -> AgentState:
+async def validator_node(state: AgentState) -> AgentState:
 
     answer = (
         state.get("modified_answer")
@@ -33,7 +33,7 @@ def validator_node(state: AgentState) -> AgentState:
         agent=validator_agent()
     )
 
-    result = task.agent.execute_task(task)
+    result = await task.agent.aexecute_task(task)
     data = json.loads(getattr(result, "raw", result))
 
     return {
