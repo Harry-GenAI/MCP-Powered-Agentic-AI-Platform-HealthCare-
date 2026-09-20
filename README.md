@@ -1,6 +1,4 @@
-# MCP-Powered Agentic AI Platform (HealtCare)
-
-
+# MCP-Powered Agentic AI Platform (HealthCare)
 
 A production-style healthcare Agentic AI / Agentic RAG system combining
 private hospital knowledge retrieval, MCP tools, LangGraph
@@ -10,6 +8,7 @@ interface.
 
 Architecture
 
+```text
 User Query
     ↓
 FastAPI /chat
@@ -52,6 +51,7 @@ Final Answer
 Redis ──→ safe completed-response cache
 PostgreSQL ──→ chat history
 SQLite ──→ staff DB + LangGraph checkpoints
+```
 
 ## Features
 

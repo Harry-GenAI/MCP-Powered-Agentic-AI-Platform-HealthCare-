@@ -1,62 +1,86 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 import uuid
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.types import Command
 
 from graph.workflow import graph
-from mcp_tools.mcp_client import init_mcp, close_mcp
+
+from mcp_tools.mcp_client import (
+    init_mcp,
+    close_mcp,
+)
 
 from utils.logger import logger
-from database.db import create_table, get_chat_history, save_chat
+
+from database.db import (
+    create_table,
+    get_chat_history,
+    save_chat,
+)
+
 from utils.query_rewriter import rewrite_query
 
-from middleware.cache import get_cache, set_cache
+from middleware.cache import set_cache
 
 
 # ============================================================
 # Application Paths
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(
+    __file__
+).resolve().parent.parent
 
-MEMORY_DIR = BASE_DIR / "memory"
-MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+MEMORY_DIR = (
+    BASE_DIR / "memory"
+)
 
-CHECKPOINT_DB = MEMORY_DIR / "langgraph_checkpoints.db"
+MEMORY_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+CHECKPOINT_DB = (
+    MEMORY_DIR /
+    "langgraph_checkpoints.db"
+)
 
 
 # ============================================================
-# LangGraph + MCP Application Lifecycle
+# LangGraph + MCP Lifecycle
 # ============================================================
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(
+    app: FastAPI
+):
 
-    logger.info("Starting HealthCare AI Application...")
+    logger.info(
+        "Starting HealthCare AI Application..."
+    )
 
     try:
-        # ----------------------------------------------------
-        # Initialize MCP once for the application lifetime.
-        # ----------------------------------------------------
-        logger.info("Initializing MCP client...")
+
+        logger.info(
+            "Initializing MCP client..."
+        )
+
         await init_mcp()
 
-        # ----------------------------------------------------
-        # Create LangGraph checkpointer.
-        # ----------------------------------------------------
-        logger.info("Starting LangGraph checkpointer...")
+        logger.info(
+            "Starting LangGraph checkpointer..."
+        )
 
         async with AsyncSqliteSaver.from_conn_string(
             str(CHECKPOINT_DB)
         ) as checkpointer:
 
-            # ------------------------------------------------
-            # Compile the graph only once at startup. #explanations-4
-            # ------------------------------------------------
             app.state.workflow = graph.compile(
                 checkpointer=checkpointer
             )
@@ -65,21 +89,20 @@ async def lifespan(app: FastAPI):
                 "LangGraph compiled successfully..."
             )
 
-            # ------------------------------------------------
-            # Application is running here.
-            # ------------------------------------------------
             yield #explanations-5
 
     finally: #explanations-5
 
-        # ----------------------------------------------------
-        # Close MCP when FastAPI shuts down.
-        # ----------------------------------------------------
-        logger.info("Closing MCP client...")
+        logger.info(
+            "Closing MCP client..."
+        )
 
         try:
+
             await close_mcp()
+
         except Exception as exc:
+
             logger.error(
                 f"Error while closing MCP client: {exc}"
             )
@@ -125,7 +148,7 @@ except Exception as exc:
 
 
 # ============================================================
-# Request / Response Schemas
+# Request Schemas
 # ============================================================
 
 class ChatRequest(BaseModel):
@@ -146,15 +169,147 @@ class ChatRequest(BaseModel):
 
     user_role: str = Field(
         default="patient",
-        description="Role of the user interacting with the system."
+        description=(
+            "Role of the user interacting with the system."
+        )
     )
 
 
+class ReviewRequest(BaseModel):
+
+    session_id: str = Field(
+        ...,
+        description=(
+            "Session ID of the paused human-review workflow."
+        )
+    )
+
+    decision: Literal[
+        "approve",
+        "modify",
+        "reject"
+    ]
+
+    reviewer_feedback: str = Field(
+        default="",
+        description=(
+            "Optional feedback from the authorized reviewer."
+        )
+    )
+
+    final_answer: str = Field(
+        default="",
+        description=(
+            "Final answer written by the authorized "
+            "reviewer for approve/modify decisions."
+        )
+    )
+
+
+# ============================================================
+# Response Schema
+# ============================================================
+
 class ChatResponse(BaseModel):
 
-    answer: str
+    answer: str = ""
 
     session_id: str
+
+    status: Literal[
+        "completed",
+        "review_required"
+    ] = "completed"
+
+    review_required: bool = False
+
+    review_request: dict | None = None
+
+    sources: list = []
+
+    route: str = ""
+
+    risk_level: str = ""
+
+
+# ============================================================
+# Interrupt Helper
+# ============================================================
+
+def get_interrupt_payload(
+    result: dict
+):
+
+    interrupts = result.get(
+        "__interrupt__"
+    )
+
+    if not interrupts:
+        return None
+
+    interrupt_obj = interrupts[0]
+
+    if hasattr(
+        interrupt_obj,
+        "value"
+    ):
+        return interrupt_obj.value
+
+    if isinstance(
+        interrupt_obj,
+        dict
+    ):
+        return interrupt_obj
+
+    return {
+        "message": str(
+            interrupt_obj
+        )
+    }
+
+
+# ============================================================
+# Pending Review Response
+# ============================================================
+
+def build_pending_response(
+    session_id: str,
+    result: dict
+) -> ChatResponse:
+
+    return ChatResponse(
+
+        answer=(
+            "This request requires review by an "
+            "authorized healthcare reviewer before "
+            "a final response can be provided."
+        ),
+
+        session_id=session_id,
+
+        status="review_required",
+
+        review_required=True,
+
+        review_request=get_interrupt_payload(
+            result
+        ),
+
+        sources=result.get(
+            "sources",
+            []
+        ),
+
+        route=result.get(
+            "route",
+            ""
+        ),
+
+        risk_level=result.get(
+            "risk_level",
+            ""
+        ),
+    )
 
 
 # ============================================================
@@ -178,11 +333,9 @@ async def health_check():
     "/chat",
     response_model=ChatResponse
 )
-async def chat(req: ChatRequest):
-
-    # --------------------------------------------------------
-    # Session Management
-    # --------------------------------------------------------
+async def chat(
+    req: ChatRequest
+):
 
     session_id = (
         req.session_id
@@ -196,10 +349,7 @@ async def chat(req: ChatRequest):
     try:
 
         # ----------------------------------------------------
-        # Load previous conversation history.
-        #
-        # This is important for query rewriting and
-        # multi-turn conversations.
+        # Conversation History
         # ----------------------------------------------------
 
         chat_history = get_chat_history(
@@ -207,25 +357,12 @@ async def chat(req: ChatRequest):
         )
 
         logger.info(
-            f"Conversation history loaded | session={session_id}"
+            f"Conversation history loaded | "
+            f"session={session_id}"
         )
-
 
         # ----------------------------------------------------
         # Query Rewriting
-        #
-        # Example:
-        #
-        # User:
-        #   What is the refund policy?
-        #
-        # Follow-up:
-        #   What about that?
-        #
-        # Query rewriter:
-        #   What is the company's refund policy?
-        #
-        # The rewritten query is then passed into LangGraph.
         # ----------------------------------------------------
 
         rewritten_query = await rewrite_query(
@@ -241,45 +378,18 @@ async def chat(req: ChatRequest):
             f"Rewritten query: {rewritten_query}"
         )
 
-
-    # --------------------------------------------------------
-    # Redis Cache Lookup
-    # --------------------------------------------------------
-
-        cache_key = (
-        f"llm:{rewritten_query.lower().strip()}"
-        )
-
-        cached = get_cache(cache_key)
-
-        if cached:
-
-           logger.info(
-            "Redis cache hit"
-            )
-
-           return {
-            "answer": cached,
-            "session_id": session_id
-            }
-            
-        logger.info(
-                "Redis cache miss"
-            )
-
-
         # ----------------------------------------------------
         # Initial LangGraph State
         # ----------------------------------------------------
 
         initial_state = {
 
-            # User / session
+            # User / Session
             "user_query": req.query,
             "user_role": req.user_role,
             "conversation_history": chat_history,
 
-            # Rewritten query
+            # Query rewriting
             "rewritten_query": rewritten_query,
 
             # Orchestration
@@ -299,33 +409,34 @@ async def chat(req: ChatRequest):
             "sources": [],
             "retrieval_status": "",
 
-            # MCP tools
+            # MCP
             "tool_result": "",
 
             # Response
             "draft_answer": "",
 
-            # Human review
-            "review_status": "approve",
-            "reviewer_feedback": "yes they can use this combination.",
-            "modified_answer": "yes they can use this combination.",
+            # Human Review
+            # IMPORTANT:
+            # These must start EMPTY.
+            # The reviewer response comes later
+            # through Command(resume=...).
+            "review_status": "",
+            "reviewer_feedback": "",
+            "modified_answer": "",
 
             # Validation
             "validation_status": "",
             "validation_reason": "",
 
-            # Final answer
+            # Final
             "final_answer": "",
 
             # Retry
             "retry_count": 0,
         }
 
-
         # ----------------------------------------------------
-        # LangGraph Thread Configuration
-        #
-        # Same session_id = same LangGraph conversation thread.
+        # LangGraph Thread
         # ----------------------------------------------------
 
         config = {
@@ -334,43 +445,43 @@ async def chat(req: ChatRequest):
             }
         }
 
-
-        # ----------------------------------------------------
-        # Execute LangGraph
-        # ----------------------------------------------------
-
         logger.info(
             f"Invoking LangGraph | session={session_id}"
         )
+
+        # ----------------------------------------------------
+        # Execute Graph
+        # ----------------------------------------------------
 
         result = await app.state.workflow.ainvoke(
             initial_state,
             config=config
         )
 
+        # ----------------------------------------------------
+        # HUMAN-IN-THE-LOOP INTERRUPT
+        # ----------------------------------------------------
+
+        if result.get("__interrupt__"): #explanations - 8
+
+            logger.info(
+                f"Human review required | "
+                f"session={session_id}"
+            )
+
+            return build_pending_response(
+                session_id,
+                result
+            )
 
         # ----------------------------------------------------
-        # Get final answer produced by the graph.
-        #
-        # IMPORTANT:
-        # Do NOT call the LLM again here.
-        #
-        # response_node -> draft_answer
-        # validator_node -> final_answer
-        # appointment_node -> final_answer
-        # rejection_node -> final_answer
-        # retry_exhausted_node -> final_answer
+        # Completed Workflow
         # ----------------------------------------------------
 
         answer = result.get(
             "final_answer",
             ""
         )
-
-
-        # ----------------------------------------------------
-        # Safety fallback
-        # ----------------------------------------------------
 
         if not answer:
 
@@ -381,17 +492,15 @@ async def chat(req: ChatRequest):
 
             raise HTTPException(
                 status_code=500,
-                detail="Workflow completed without a final answer."
+                detail=(
+                    "Workflow completed without "
+                    "a final answer."
+                )
             )
 
-
         # ----------------------------------------------------
-        # Save Conversation History
+        # Save Chat
         # ----------------------------------------------------
-
-        logger.info(
-            f"Saving chat history | session={session_id}"
-        )
 
         save_chat(
             session_id,
@@ -399,9 +508,46 @@ async def chat(req: ChatRequest):
             answer
         )
 
+        # ----------------------------------------------------
+        # Redis Cache
+        #
+        # Only cache completed, low-risk,
+        # informational RAG responses.
+        # ----------------------------------------------------
+
+        if (
+            result.get("risk_level") == "low"
+            and result.get("route")
+            in {
+                "internal_rag",
+                "vendor_rag",
+            }
+        ):
+
+            cache_key = (
+                f"llm:"
+                f"{rewritten_query.lower().strip()}"
+            )
+
+            try:
+
+                set_cache(
+                    cache_key,
+                    answer
+                )
+
+                logger.info(
+                    "Safe response stored in Redis cache"
+                )
+
+            except Exception as exc:
+
+                logger.exception(
+                    f"Redis cache write failed: {exc}"
+                )
 
         # ----------------------------------------------------
-        # Log Workflow Result
+        # Workflow Log
         # ----------------------------------------------------
 
         logger.info(
@@ -412,20 +558,38 @@ async def chat(req: ChatRequest):
             f"validation={result.get('validation_status')}"
         )
 
-
         # ----------------------------------------------------
-        # Return API Response
+        # Return
         # ----------------------------------------------------
 
         return ChatResponse(
-            answer=answer,
-            session_id=session_id
-        )
 
+            answer=answer,
+
+            session_id=session_id,
+
+            status="completed",
+
+            review_required=False,
+
+            sources=result.get(
+                "sources",
+                []
+            ),
+
+            route=result.get(
+                "route",
+                ""
+            ),
+
+            risk_level=result.get(
+                "risk_level",
+                ""
+            ),
+        )
 
     except HTTPException:
         raise
-
 
     except Exception as exc:
 
@@ -437,5 +601,190 @@ async def chat(req: ChatRequest):
 
         raise HTTPException(
             status_code=500,
-            detail="An error occurred while processing the request."
+            detail=(
+                "An error occurred while "
+                "processing the request."
+            )
+        )
+
+
+# ============================================================
+# HUMAN REVIEW RESUME ENDPOINT
+# ============================================================
+
+@app.post(
+    "/review",
+    response_model=ChatResponse
+)
+async def submit_review(
+    req: ReviewRequest
+):
+
+    session_id = req.session_id
+
+    logger.info(
+        f"Human review submitted | "
+        f"session={session_id} | "
+        f"decision={req.decision}"
+    )
+
+    # --------------------------------------------------------
+    # Approve / Modify requires a final human-written answer.
+    # --------------------------------------------------------
+
+    if (
+        req.decision in {
+            "approve",
+            "modify",
+        }
+        and not req.final_answer.strip()
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "final_answer is required when the "
+                "reviewer approves or modifies the request."
+            )
+        )
+
+    # --------------------------------------------------------
+    # Resume Payload
+    # --------------------------------------------------------
+
+    resume_value = {
+
+        "decision": req.decision,
+
+        "reviewer_feedback":
+            req.reviewer_feedback,
+
+        "final_answer":
+            req.final_answer,
+    }
+
+    config = {
+        "configurable": {
+            "thread_id": session_id
+        }
+    }
+
+    try:
+
+        # ----------------------------------------------------
+        # Resume interrupted LangGraph workflow
+        # ----------------------------------------------------
+
+        result = await app.state.workflow.ainvoke(
+
+            Command(
+                resume=resume_value
+            ),
+
+            config=config
+        )
+
+        # ----------------------------------------------------
+        # Defensive interrupt check
+        # ----------------------------------------------------
+
+        if result.get(
+            "__interrupt__"
+        ):
+
+            logger.error(
+                f"Workflow requested another review | "
+                f"session={session_id}"
+            )
+
+            return build_pending_response(
+                session_id,
+                result
+            )
+
+        # ----------------------------------------------------
+        # Final Human-Approved / Modified Answer
+        # ----------------------------------------------------
+
+        answer = result.get(
+            "final_answer",
+            ""
+        )
+
+        if not answer:
+
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Review completed without "
+                    "a final answer."
+                )
+            )
+
+        # ----------------------------------------------------
+        # Save Reviewed Conversation
+        # ----------------------------------------------------
+
+        save_chat(
+            session_id,
+            result.get(
+                "user_query",
+                "[Human-reviewed request]"
+            ),
+            answer
+        )
+
+        logger.info(
+            f"Human review workflow completed | "
+            f"session={session_id} | "
+            f"status={result.get('review_status')}"
+        )
+
+        # ----------------------------------------------------
+        # Return
+        # ----------------------------------------------------
+
+        return ChatResponse(
+
+            answer=answer,
+
+            session_id=session_id,
+
+            status="completed",
+
+            review_required=False,
+
+            sources=result.get(
+                "sources",
+                []
+            ),
+
+            route=result.get(
+                "route",
+                ""
+            ),
+
+            risk_level=result.get(
+                "risk_level",
+                ""
+            ),
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+
+        logger.exception(
+            f"Human review failed | "
+            f"session={session_id} | "
+            f"error={exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "An error occurred while "
+                "resuming the review workflow."
+            )
         )
