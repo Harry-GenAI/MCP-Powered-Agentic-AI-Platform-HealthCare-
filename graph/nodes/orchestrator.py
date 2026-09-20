@@ -21,9 +21,8 @@ async def orchestrator_node(state:AgentState)-> AgentState:
     )
 
     result = await task.agent.aexecute_task(task)
-    print(f"\nresult\n")
+    
     data = json.loads(getattr(result, "raw", result))
-    print(f"\ndata\n")
 
     return {
         "route":data["route"],

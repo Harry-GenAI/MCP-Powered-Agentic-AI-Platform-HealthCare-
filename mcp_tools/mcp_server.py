@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 import json
-import requests
+import requests #requests is http library
 from bs4 import BeautifulSoup
 import sqlite3
 import smtplib
@@ -106,10 +106,14 @@ def query_database(sql: str) -> str:
 # ============================================================
 # web search tool
 # ============================================================
+#explanations-7
 
 @mcp.tool()
 def web_search(query: str) -> str:
-
+    """
+    Query the outside web and for non related db information.
+    """
+   
     url = "https://html.duckduckgo.com/html/"
 
     response = requests.get(
