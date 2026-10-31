@@ -36,7 +36,7 @@ class AgentState(TypedDict, total=False):
 
 
     # Tools  sql/websearch/External RAG
-    tool_result : str
+    tool_result : str 
 
 
     # LLM Response

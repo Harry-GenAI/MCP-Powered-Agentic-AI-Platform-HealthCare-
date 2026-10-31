@@ -10,7 +10,7 @@ redis_client = redis.Redis(
 )
 
 #save/set redis cache
-def set_cache(key:str, value, ttl:int=3600):
+def set_cache(key_name:str, value, exp_time_limit:int=3600):
 
     redis_client.set(
         name=key,

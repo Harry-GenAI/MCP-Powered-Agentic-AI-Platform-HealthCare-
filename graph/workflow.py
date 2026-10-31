@@ -1,12 +1,17 @@
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+sys.path.append(
+    str(Path(__file__).resolve().parent.parent)
+)
 
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import (
+    StateGraph,
+    START,
+    END,
+)
 
 from graph.state import AgentState
-
 
 from graph.nodes.orchestrator import orchestrator_node
 from graph.nodes.rag import rag_node
@@ -22,9 +27,9 @@ from graph.nodes.appointment import appointment_node
 from graph.routers import (
     route_after_orchestrator,
     route_after_rag,
-    route_after_response,
-    route_after_validation,
+    route_after_evidence,
     route_after_review,
+    route_after_validation,
 )
 
 from dotenv import load_dotenv
@@ -79,7 +84,7 @@ builder.add_node(
 )
 
 builder.add_node(
-    "retry", 
+    "retry",
     retry_node
 )
 
@@ -93,6 +98,7 @@ builder.add_node(
     retry_exhausted_node
 )
 
+
 # ============================================================
 # Entry Point
 # ============================================================
@@ -104,7 +110,7 @@ builder.add_edge(
 
 
 # ============================================================
-# Orchestrator → RAG / MCP Tool
+# Orchestrator → RAG / MCP Tool / Appointment
 # ============================================================
 
 builder.add_conditional_edges(
@@ -113,58 +119,63 @@ builder.add_conditional_edges(
     {
         "rag": "rag",
         "tool": "tool",
-        "appointment" : "appointment"
-    }
+        "appointment": "appointment",
+    },
 )
 
 
 # ============================================================
-# Retrieval / Tool → Response
+# RAG → Response / Human Review / Web Search
 # ============================================================
 
 builder.add_conditional_edges(
     "rag",
     route_after_rag,
     {
-        "response":"response",
-        "tool":"tool"
-    }
-)
-
-builder.add_edge(
-    "tool",
-    "response"
+        "response": "response",
+        "human_review": "human_review",
+        "tool": "tool",
+    },
 )
 
 
 # ============================================================
-# Response → Human Review / Validator
+# MCP Tool → Response / Human Review
 # ============================================================
 
 builder.add_conditional_edges(
-    "response",
-    route_after_response,
+    "tool",
+    route_after_evidence,
     {
+        "response": "response",
         "human_review": "human_review",
-        "validator": "validator",
-    }
+    },
 )
 
 
 # ============================================================
-# Human Review → Validator
+# Response → Validator
+# ============================================================
+
+# Response node is only reached for LOW-risk requests.
+builder.add_edge(
+    "response",
+    "validator"
+)
+
+
+# ============================================================
+# Human Review → END / Rejected
 # ============================================================
 
 builder.add_conditional_edges(
     "human_review",
     route_after_review,
     {
-        "validator": "validator",
+        "end": END,
         "rejected": "rejected",
-    }
+    },
 )
-
-
 
 
 # ============================================================
@@ -175,12 +186,16 @@ builder.add_conditional_edges(
     "validator",
     route_after_validation,
     {
-        "retry":"retry",
-        "end":END,
-        "retry_exhausted":"retry_exhausted"
-    }
+        "end": END,
+        "retry": "retry",
+        "retry_exhausted": "retry_exhausted",
+    },
 )
 
+
+# ============================================================
+# Retry
+# ============================================================
 
 builder.add_edge(
     "retry",
@@ -188,18 +203,28 @@ builder.add_edge(
 )
 
 
+# ============================================================
+# Rejection
+# ============================================================
+
 builder.add_edge(
     "rejected",
     END
 )
 
+
+# ============================================================
+# Retry Exhausted
+# ============================================================
+
 builder.add_edge(
-    "retry_exhausted", END
+    "retry_exhausted",
+    END
 )
 
 
 # ============================================================
-# Appointment → END
+# Appointment
 # ============================================================
 
 builder.add_edge(
@@ -208,12 +233,9 @@ builder.add_edge(
 )
 
 
-
 # ============================================================
-# 
-# Exporting the BUILDER, not a compiled graph.
-#
-# FastAPI will compile it with AsyncSqliteSaver.
+# Export Builder
 # ============================================================
 
+# FastAPI compiles this with AsyncSqliteSaver.
 graph = builder

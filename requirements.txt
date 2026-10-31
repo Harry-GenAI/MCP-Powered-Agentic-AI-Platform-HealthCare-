@@ -27,7 +27,7 @@ beautifulsoup4
 
 
 prometheus-fastapi-instrumentator
-vllm
+
 
 
 redis

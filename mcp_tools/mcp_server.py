@@ -43,7 +43,7 @@ def external_patient_services_search(query:str)->str:
         json={"query":query},
         )
 
-        data = response.json()
+        data = response.json()#explanations-9
 
         context = data.get("context", "")
         sources = data.get("sources", "")
