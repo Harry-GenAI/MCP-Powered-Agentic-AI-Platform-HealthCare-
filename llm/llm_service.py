@@ -8,11 +8,12 @@ from middleware.retry import retry
 from middleware.timeout import timeout
 from middleware.rate_limit import rate_limit
 
+MODEL_PATH = os.getenv(
+    "MODEL_PATH",
+    "HuggingFaceTB/SmolLM2-135M-Instruct"
+)
 
-MODEL_PATH = os.getenv("MODEL_PATH", "./local_model")
-
-logger.info(f"Loading model from {MODEL_PATH}")
-
+logger.info(f"Loading Hugging Face model: {MODEL_PATH}")
 
 # CUDA / CPU
 if torch.cuda.is_available():
@@ -22,19 +23,15 @@ else:
     MODEL_DEVICE = "cpu"
     MODEL_DTYPE = torch.float32
 
-
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(
-    MODEL_PATH,
-    local_files_only=True
+    MODEL_PATH
 )
-
 
 # Load model
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_PATH,
-    torch_dtype=MODEL_DTYPE,
-    local_files_only=True
+    torch_dtype=MODEL_DTYPE
 ).to(MODEL_DEVICE)
 
 model.eval()
