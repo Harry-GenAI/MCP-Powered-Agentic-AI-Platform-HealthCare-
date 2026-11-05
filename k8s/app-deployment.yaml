@@ -1,0 +1,47 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthcare-agent
+  namespace: healthcare-rag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: healthcare-agent
+  template:
+    metadata:
+      labels:
+        app: healthcare-agent
+    spec:
+      containers:
+        - name: healthcare-agent
+          image: 412179655392.dkr.ecr.us-east-1.amazonaws.com/healthcare-agent:v1
+          imagePullPolicy: Always
+          envFrom:
+              - secretRef:
+                  name: healthcare-agent-env
+          env:
+          - name: WEAVIATE_HOST
+            value: "weaviate.healthcare-rag.svc.cluster.local"
+            
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthcare-agent
+  namespace: healthcare-rag
+spec:
+  type: ClusterIP
+  selector:
+    app: healthcare-agent
+  ports:
+    - port: 8000
+      targetPort: 8000

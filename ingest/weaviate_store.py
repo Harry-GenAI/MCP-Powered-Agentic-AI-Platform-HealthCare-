@@ -132,52 +132,36 @@ def calculate_file_hash(
 # ============================================================
 
 def connect_weaviate():
-
     import os
 
+    weaviate_host = os.getenv("WEAVIATE_HOST")
+    url = os.getenv("WEAVIATE_URL")
+    api_key = os.getenv("WEAVIATE_API_KEY")
 
-    url = os.getenv(
-        "WEAVIATE_URL"
-    )
+    # Kubernetes self-hosted Weaviate
+    if weaviate_host:
+        logger.info("Connecting to Kubernetes Weaviate...")
 
-    api_key = os.getenv(
-        "WEAVIATE_API_KEY"
-    )
+        return weaviate.connect_to_custom(
+            http_host=weaviate_host,
+            http_port=8080,
+            http_secure=False,
+            grpc_host=weaviate_host,
+            grpc_port=50051,
+            grpc_secure=False
+        )
 
-
-    # --------------------------------------------------------
-    # Cloud
-    # --------------------------------------------------------
-
+    # Weaviate Cloud
     if url and api_key:
+        logger.info("Connecting to Weaviate Cloud...")
 
-        logger.info(
-            "Connecting to Weaviate Cloud..."
+        return weaviate.connect_to_weaviate_cloud(
+            cluster_url=url,
+            auth_credentials=weaviate.auth.Auth.api_key(api_key)
         )
 
-
-        return (
-            weaviate
-            .connect_to_weaviate_cloud(
-                cluster_url=url,
-                auth_credentials=(
-                    weaviate.auth.Auth.api_key(
-                        api_key
-                    )
-                ),
-            )
-        )
-
-
-    # --------------------------------------------------------
-    # Local
-    # --------------------------------------------------------
-
-    logger.info(
-        "Connecting to local Weaviate..."
-    )
-
-
+    # Local development
+    logger.info("Connecting to local Weaviate...")
     return weaviate.connect_to_local()
 
 
